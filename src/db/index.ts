@@ -1,3 +1,4 @@
-import { usersTable } from "@/db/models/users.table";
+import { deviceTable } from '@/db/models/device.table';
+import { subnetTable } from '@/db/models/subnet.table';
 
-export { usersTable };
+export { deviceTable, subnetTable };
