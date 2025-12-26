@@ -9,7 +9,7 @@
     "@scalar/hono-api-reference": "^0.9.22",
     "@types/ping": "^0.4.4",
     "dotenv": "^17.2.3",
-    "drizzle-orm": "^0.44.6",
+    "drizzle-orm": "^1.0.0-beta.6-4414a19",
     "hono": "^4.9.12",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
