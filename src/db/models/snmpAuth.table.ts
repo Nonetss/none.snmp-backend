@@ -1,6 +1,6 @@
 import { pgTable, integer, varchar } from 'drizzle-orm/pg-core';
 
-export const snmpTable = pgTable('snmp', {
+export const snmpAuthTable = pgTable('snmp_auth', {
   id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
   version: varchar('version', { enum: ['v1', 'v2c', 'v3'] }).notNull(),
   port: integer('port').notNull().default(161),

@@ -1,7 +1,7 @@
 import { walkSNMPv1, getSNMPv1 } from '@/lib/snmp/v1';
 import { walkSNMPv2c, getSNMPv2c } from '@/lib/snmp/v2c';
 import { walkSNMPv3, getSNMPv3 } from '@/lib/snmp/v3';
-import type { snmpTable } from '@/db/models/snmp.table';
+import type { snmpAuthTable } from '@/db/models/snmpAuth.table';
 import type { InferSelectModel } from 'drizzle-orm';
 import * as snmp from 'net-snmp';
 
@@ -9,7 +9,7 @@ export * from '@/lib/snmp/v1';
 export * from '@/lib/snmp/v2c';
 export * from '@/lib/snmp/v3';
 
-type SNMPRecord = InferSelectModel<typeof snmpTable>;
+type SNMPRecord = InferSelectModel<typeof snmpAuthTable>;
 
 export async function getSNMP(ip: string, config: SNMPRecord, oids: string[]) {
   switch (config.version) {
