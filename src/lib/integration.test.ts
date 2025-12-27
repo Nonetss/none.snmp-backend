@@ -3,7 +3,7 @@ import { pingHost } from '@/lib/icmp';
 import { getSNMP } from '@/lib/snmp/index';
 
 // Configuración basada en tu src/prueba.ts
-const TARGET_IP = process.env.TARGET_IP;
+const TARGET_IP = process.env.TARGET_IP!;
 const OIDS = ['1.3.6.1.2.1.1.1.0', '1.3.6.1.2.1.1.5.0'];
 
 const mockDbConfig: any = {
