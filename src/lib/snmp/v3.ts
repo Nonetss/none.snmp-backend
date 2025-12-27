@@ -46,6 +46,7 @@ export async function getSNMPv3(
     const session = snmp.createV3Session(config.ip, user, options);
 
     session.get(oids, (error, varbinds) => {
+      session.close();
       if (error) {
         reject(error);
       } else if (varbinds) {
@@ -53,7 +54,64 @@ export async function getSNMPv3(
       } else {
         reject(new Error('No varbinds returned'));
       }
-      session.close();
     });
+  });
+}
+
+export async function walkSNMPv3(
+  config: SNMPv3Config,
+  rootOid: string,
+): Promise<snmp.Varbind[]> {
+  return new Promise((resolve, reject) => {
+    const user: snmp.User = {
+      name: config.user,
+      level:
+        config.level === 'authPriv'
+          ? snmp.SecurityLevel.authPriv
+          : config.level === 'authNoPriv'
+            ? snmp.SecurityLevel.authNoPriv
+            : snmp.SecurityLevel.noAuthNoPriv,
+      authProtocol:
+        config.authProtocol === 'sha'
+          ? snmp.AuthProtocols.sha
+          : snmp.AuthProtocols.md5,
+      authKey: config.authKey,
+      privProtocol:
+        config.privProtocol === 'aes'
+          ? snmp.PrivProtocols.aes
+          : snmp.PrivProtocols.des,
+      privKey: config.privKey,
+    };
+
+    const options: snmp.SessionOptionsV3 = {
+      port: config.port,
+      version: snmp.Version3,
+      retries: 1,
+      timeout: 5000,
+    };
+
+    const session = snmp.createV3Session(config.ip, user, options);
+    const result: snmp.Varbind[] = [];
+
+    session.walk(
+      rootOid,
+      (varbinds) => {
+        for (const vb of varbinds) {
+          if (snmp.isVarbindError(vb)) {
+            console.error(snmp.varbindError(vb));
+          } else {
+            result.push(vb);
+          }
+        }
+      },
+      (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+        session.close();
+      },
+    );
   });
 }

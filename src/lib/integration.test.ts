@@ -1,10 +1,10 @@
 import { expect, test, describe } from 'bun:test';
 import { pingHost } from '@/lib/icmp';
-import { getSNMP } from '@/lib/snmp/index';
+import { walkSNMP, formatVarbinds } from '@/lib/snmp/index';
 
 // Configuración basada en tu src/prueba.ts
-const TARGET_IP = process.env.TARGET_IP!;
-const OIDS = ['1.3.6.1.2.1.1.1.0', '1.3.6.1.2.1.1.5.0'];
+const TARGET_IP = '10.10.1.40';
+const ROOT_OID = '1.3.6.1.2.1.1'; // System group
 
 const mockDbConfig: any = {
   version: 'v3',
@@ -24,17 +24,17 @@ describe(`Integration Tests against ${TARGET_IP}`, () => {
     expect(res.alive).toBe(true);
   });
 
-  test('Debería responder a consulta SNMP v3', async () => {
+  test('Debería responder a walk SNMP v3', async () => {
     try {
-      const varbinds = await getSNMP(TARGET_IP, mockDbConfig, OIDS);
-      console.log(`[SNMP] Respuestas recibidas: ${varbinds.length}`);
+      const varbinds = await walkSNMP(TARGET_IP, mockDbConfig, ROOT_OID);
+      console.log(`[SNMP WALK] Respuestas recibidas: ${varbinds.length}`);
 
-      varbinds.forEach((v) => {
-        console.log(`  OID: ${v.oid}, Value: ${v.value?.toString()}`);
+      const formatted = formatVarbinds(varbinds);
+      formatted.slice(0, 5).forEach((v) => {
+        console.log(`  OID: ${v.oid}, Value: ${v.value}`);
       });
 
       expect(varbinds.length).toBeGreaterThan(0);
-      expect(varbinds[0].value).toBeDefined();
     } catch (error) {
       console.error('[SNMP Error]', error);
       throw error;

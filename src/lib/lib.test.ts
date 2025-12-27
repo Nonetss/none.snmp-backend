@@ -33,7 +33,7 @@ mock.module('net-snmp', () => {
 });
 
 import { pingHost } from '@/lib/icmp';
-import { getSNMPv1, getSNMPv2c, getSNMPv3 } from '@/lib/snmp';
+import { getSNMPv1, getSNMPv3 } from '@/lib/snmp';
 import { getSNMP, formatVarbinds } from '@/lib/snmp/index';
 
 describe('ICMP / Ping', () => {
