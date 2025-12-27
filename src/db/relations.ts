@@ -7,6 +7,15 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.subnetId,
       to: r.deviceTable.id,
     }),
+    snmpTable: r.one.deviceTable({
+      from: r.deviceTable.snmpId,
+      to: r.deviceTable.id,
+    }),
+  },
+  subnetTable: {
+    deviceTable: r.many.deviceTable(),
+  },
+  snmpTable: {
     deviceTable: r.many.deviceTable(),
   },
 }));
