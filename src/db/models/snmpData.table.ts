@@ -7,7 +7,6 @@ import {
 import { deviceTable, metricsDefinitionTable } from '@/db';
 
 export const snmpDataTable = pgTable('snmp_data', {
-  id: integer('id').generatedAlwaysAsIdentity().primaryKey(),
   time: timestamp('time', { withTimezone: true }).notNull(),
   deviceId: integer('device_id')
     .notNull()
