@@ -1,11 +1,13 @@
 import { Scalar } from '@scalar/hono-api-reference';
 import { z, createRoute, OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
+import { logger } from 'hono/logger';
 import { Handler } from 'hono';
 
 const app = new OpenAPIHono();
 
 app.use('*', cors());
+app.use('*', logger());
 
 const rootSchema = z.object({
   message: z.string().openapi({ example: 'Hello, World!' }),
