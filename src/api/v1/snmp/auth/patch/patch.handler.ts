@@ -1,10 +1,10 @@
 import { db } from '@/core/config';
 import { snmpAuthTable } from '@/db';
 import { eq } from 'drizzle-orm';
-import type { AppRouteHandler } from '@hono/zod-openapi';
+import type { RouteHandler } from '@hono/zod-openapi';
 import type { patchAuthRoute } from './patch.route';
 
-export const patchAuthHandler: AppRouteHandler<typeof patchAuthRoute> = async (
+export const patchAuthHandler: RouteHandler<typeof patchAuthRoute> = async (
   c,
 ) => {
   const { id } = c.req.valid('param');

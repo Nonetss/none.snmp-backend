@@ -1,12 +1,12 @@
 import { db } from '@/core/config';
 import { snmpAuthTable } from '@/db';
 import { eq } from 'drizzle-orm';
-import type { AppRouteHandler } from '@hono/zod-openapi';
+import type { RouteHandler } from '@hono/zod-openapi';
 import type { deleteAuthRoute } from './delete.route';
 
-export const deleteAuthHandler: AppRouteHandler<
-  typeof deleteAuthRoute
-> = async (c) => {
+export const deleteAuthHandler: RouteHandler<typeof deleteAuthRoute> = async (
+  c,
+) => {
   const { id } = c.req.valid('param');
 
   try {

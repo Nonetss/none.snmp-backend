@@ -1,9 +1,9 @@
 import { db } from '@/core/config';
 import { snmpAuthTable } from '@/db';
-import type { AppRouteHandler } from '@hono/zod-openapi';
+import type { RouteHandler } from '@hono/zod-openapi';
 import type { listAuthRoute } from './list.route';
 
-export const listAuthHandler: AppRouteHandler<typeof listAuthRoute> = async (
+export const listAuthHandler: RouteHandler<typeof listAuthRoute> = async (
   c,
 ) => {
   try {
