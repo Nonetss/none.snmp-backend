@@ -7,6 +7,8 @@ import {
 export const deleteAuthRoute = createRoute({
   method: 'delete',
   path: '/{id}',
+  summary: 'Delete SNMP authentication',
+  description: 'Removes an SNMP authentication configuration from the system.',
   request: {
     params: DeleteAuthParamsSchema,
   },

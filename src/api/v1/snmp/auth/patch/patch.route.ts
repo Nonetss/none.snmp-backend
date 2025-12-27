@@ -8,6 +8,9 @@ import {
 export const patchAuthRoute = createRoute({
   method: 'patch',
   path: '/{id}',
+  summary: 'Update SNMP authentication',
+  description:
+    'Updates an existing SNMP authentication configuration with the provided data.',
   request: {
     params: PatchAuthParamsSchema,
     body: {

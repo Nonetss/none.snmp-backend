@@ -4,9 +4,9 @@ import { PostAuthSchema, PostAuthResponseSchema } from './post.schema';
 export const postAuthRoute = createRoute({
   method: 'post',
   path: '/',
-  summary: 'Create SNMP Authentication',
-  description: 'Create a new SNMP authentication',
-  tags: ['SNMP Authentication'],
+  summary: 'Create SNMP authentication',
+  description:
+    'Creates a new SNMP authentication configuration in the database for later use in polling or discovery.',
   request: {
     body: {
       content: {

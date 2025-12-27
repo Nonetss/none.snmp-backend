@@ -4,6 +4,9 @@ import { ListAuthResponseSchema } from './list.schema';
 export const listAuthRoute = createRoute({
   method: 'get',
   path: '/',
+  summary: 'List SNMP authentications',
+  description:
+    'Retrieves a list of all SNMP authentication configurations stored in the system.',
   responses: {
     200: {
       content: {
