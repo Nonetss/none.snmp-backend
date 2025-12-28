@@ -6,7 +6,7 @@ export const getDeviceSystemRoute = createRoute({
   path: '/{id}/system',
   summary: 'Get device system information',
   tags: ['Device System'],
-  request: { params: z.object({ id: z.string() }) },
+  request: { params: z.object({ id: z.string().openapi({ example: '1' }) }) },
   responses: {
     200: {
       content: {

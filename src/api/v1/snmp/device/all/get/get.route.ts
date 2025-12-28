@@ -6,7 +6,7 @@ export const getDeviceAllRoute = createRoute({
   path: '/{id}/all',
   summary: 'Get all device inventory data',
   tags: ['Device All'],
-  request: { params: z.object({ id: z.string() }) },
+  request: { params: z.object({ id: z.string().openapi({ example: '1' }) }) },
   responses: {
     200: {
       content: { 'application/json': { schema: getDeviceAllResponseSchema } },
