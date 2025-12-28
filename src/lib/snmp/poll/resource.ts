@@ -30,20 +30,14 @@ const TARGET_COLUMNS = [
   'hrSWInstalledDate',
 ] as const;
 
-/**
- * Parsea fechas SNMP (DateAndTime) que suelen venir como Buffer de 8 o 11 bytes.
- * Formato: 2 bytes año, 1 mes, 1 dia, 1 hora, 1 min, 1 sec, 1 deci-sec, ...
- */
 function parseSnmpDate(buffer: Buffer): Date {
-  if (buffer.length < 8) return new Date(); // Fallback
+  if (buffer.length < 8) return new Date();
   const year = (buffer[0] << 8) | buffer[1];
   const month = buffer[2];
   const day = buffer[3];
   const hour = buffer[4];
   const minute = buffer[5];
   const second = buffer[6];
-  // const deci = buffer[7];
-  // Ignoramos timezone offset por simplicidad o asumimos UTC/Local
   return new Date(year, month - 1, day, hour, minute, second);
 }
 
@@ -58,12 +52,6 @@ function formatValue(name: string, value: any): any {
         return new Date();
       }
     }
-
-    // OIDs
-    if (name === 'hrSWRunID' || name === 'hrSWInstalledID') {
-      return value.toString();
-    }
-    // Enteros en buffer
     if (
       [
         'hrSWRunIndex',
@@ -80,17 +68,8 @@ function formatValue(name: string, value: any): any {
     return value.toString('utf-8');
   }
 
-  if (name === 'hrSWInstalledDate') {
-    // Si por casualidad viene ya parseado
-    return new Date(String(value));
-  }
+  if (name === 'hrSWInstalledDate') return new Date(String(value));
 
-  // OIDs
-  if (name === 'hrSWRunID' || name === 'hrSWInstalledID') {
-    return String(value);
-  }
-
-  // Enteros
   if (
     [
       'hrSWRunIndex',
@@ -152,7 +131,6 @@ export async function pollResources() {
       const installedMap = new Map<number, Record<string, unknown>>();
 
       for (const { name, result } of data) {
-        // Determinar a qué grupo pertenece la métrica
         const isRun = name.startsWith('hrSWRun');
         const isInstalled = name.startsWith('hrSWInstalled');
 
@@ -181,9 +159,10 @@ export async function pollResources() {
 
       const timestamp = new Date();
 
-      // --- Insertar Procesos (Running) ---
+      // --- Insertar Procesos (Snapshot Log) ---
       if (runList.length > 0) {
         const runEntries = runList.map((p: any) => ({
+          deviceId: device.id,
           date: timestamp,
           hrSWRunIndex: p.hrSWRunIndex,
           hrSWRunName: p.hrSWRunName || '',
@@ -201,6 +180,7 @@ export async function pollResources() {
               p.hrSWRunPerfCPU !== undefined || p.hrSWRunPerfMem !== undefined,
           )
           .map((p: any) => ({
+            deviceId: device.id,
             date: timestamp,
             hrSWRunPerfCPU: Number(p.hrSWRunPerfCPU) || 0,
             hrSWRunPerfMem: Number(p.hrSWRunPerfMem) || 0,
@@ -210,9 +190,10 @@ export async function pollResources() {
         }
       }
 
-      // --- Insertar Software Instalado ---
+      // --- Insertar Software Instalado (Inventory Upsert) ---
       if (installedList.length > 0) {
         const installedEntries = installedList.map((p: any) => ({
+          deviceId: device.id,
           date: timestamp,
           hrSWInstalledIndex: p.hrSWInstalledIndex,
           hrSWInstalledName: p.hrSWInstalledName || '',
@@ -223,11 +204,27 @@ export async function pollResources() {
               ? p.hrSWInstalledDate
               : new Date(),
         }));
-        await db.insert(hrSWInstalledEntryTable).values(installedEntries);
+
+        await db
+          .insert(hrSWInstalledEntryTable)
+          .values(installedEntries)
+          .onConflictDoUpdate({
+            target: [
+              hrSWInstalledEntryTable.deviceId,
+              hrSWInstalledEntryTable.hrSWInstalledName,
+            ],
+            set: {
+              hrSWInstalledIndex: sql.raw('EXCLUDED.hr_sw_installed_index'),
+              hrSWInstalledID: sql.raw('EXCLUDED.hr_sw_installed_id'),
+              hrSWInstalledType: sql.raw('EXCLUDED.hr_sw_installed_type'),
+              hrSWInstalledDate: sql.raw('EXCLUDED.hr_sw_installed_date'),
+              date: new Date(),
+            },
+          });
       }
 
       console.log(
-        `[Resource Poll] ${device.ipv4}: Insertados ${runList.length} procesos y ${installedList.length} paquetes instalados.`,
+        `[Resource Poll] ${device.ipv4}: Insertados ${runList.length} procesos y ${installedList.length} apps instaladas.`,
       );
     } catch (error) {
       console.error(`Error procesando recursos de ${device.ipv4}:`, error);
