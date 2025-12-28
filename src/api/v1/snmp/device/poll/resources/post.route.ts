@@ -5,7 +5,7 @@ export const postPollResourcesRoute = createRoute({
   method: 'post',
   path: '/resources',
   summary: 'Poll device resources (All devices)',
-  tags: ['Poll'],
+  tags: ['SNMP Poll'],
   responses: {
     200: {
       content: { 'application/json': { schema: postPollResourcesSchema } },
@@ -29,7 +29,7 @@ export const postPollSingleResourceRoute = createRoute({
   method: 'post',
   path: '/{id}/resources',
   summary: 'Poll device resources (Single device)',
-  tags: ['Poll'],
+  tags: ['SNMP Poll'],
   request: {
     params: z.object({
       id: z.string().openapi({ example: '1' }),

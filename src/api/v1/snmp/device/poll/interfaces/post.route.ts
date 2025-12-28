@@ -5,7 +5,7 @@ export const postPollInterfacesRoute = createRoute({
   method: 'post',
   path: '/interfaces',
   summary: 'Poll network interfaces (All devices)',
-  tags: ['Poll'],
+  tags: ['SNMP Poll'],
   description:
     'Triggers a manual poll of all registered device interfaces via SNMP.',
   responses: {
@@ -31,7 +31,7 @@ export const postPollSingleInterfaceRoute = createRoute({
   method: 'post',
   path: '/{id}/interfaces',
   summary: 'Poll network interfaces (Single device)',
-  tags: ['Poll'],
+  tags: ['SNMP Poll'],
   request: {
     params: z.object({
       id: z.string().openapi({ example: '1' }),

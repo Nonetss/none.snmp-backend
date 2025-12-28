@@ -5,7 +5,7 @@ export const postPollIpRoute = createRoute({
   method: 'post',
   path: '/ip',
   summary: 'Poll device IP and ARP tables (All devices)',
-  tags: ['Poll'],
+  tags: ['SNMP Poll'],
   responses: {
     200: {
       content: { 'application/json': { schema: postPollIpSchema } },
@@ -29,7 +29,7 @@ export const postPollSingleIpRoute = createRoute({
   method: 'post',
   path: '/{id}/ip',
   summary: 'Poll device IP and ARP tables (Single device)',
-  tags: ['Poll'],
+  tags: ['SNMP Poll'],
   request: {
     params: z.object({
       id: z.string().openapi({ example: '1' }),
