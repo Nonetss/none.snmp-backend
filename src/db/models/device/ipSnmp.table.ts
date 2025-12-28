@@ -12,6 +12,10 @@ export const ipSnmpTable = pgTable('ip_snmp', {
 
 // 1.3.6.1.2.1.4.20.1 - ipAddrEntry
 export const ipAddrEntryTable = pgTable('ip_addr_entry', {
+  ipSnmpId: integer('ip_snmp_id')
+    .notNull()
+    .references(() => ipSnmpTable.id),
+  time: timestamp('time', { withTimezone: true }).notNull(),
   ipAdEntAddr: varchar('ip_ad_ent_addr', { length: 20 }).notNull(), // Indica la dirección IP de la interfaz
   ipAdEntIfIndex: integer('ip_ad_ent_if_index').notNull(), // Indica el índice de la interfaz
   ipAdEntNetMask: varchar('ip_ad_ent_net_mask', { length: 20 }).notNull(), // Indica la máscara de red de la interfaz
@@ -21,6 +25,10 @@ export const ipAddrEntryTable = pgTable('ip_addr_entry', {
 
 // 1.3.6.1.2.1.4.22.1 - ipNetToMediaTable
 export const ipNetToMediaTable = pgTable('ip_net_to_media_table', {
+  ipSnmpId: integer('ip_snmp_id')
+    .notNull()
+    .references(() => ipSnmpTable.id),
+  time: timestamp('time', { withTimezone: true }).notNull(),
   ipNetToMediaIfIndex: integer('ip_net_to_media_if_index').notNull(), // Indica el índice de la interfaz
   ipNetToMediaPhysAddress: varchar('ip_net_to_media_phys_address', {
     length: 20,

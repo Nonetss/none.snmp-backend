@@ -85,10 +85,10 @@ export const postScanHandler: RouteHandler<typeof postScanRoute> = async (
 
       if (successfulAuthId) {
         await db.execute(sql`
-          INSERT INTO ${deviceTable} (ipv4, subnet_id, snmp_id)
+          INSERT INTO ${deviceTable} (ipv4, subnet_id, snmp_auth_id)
           VALUES (${ip}, ${subnet.id}, ${successfulAuthId})
           ON CONFLICT (ipv4) DO UPDATE
-          SET snmp_id = ${successfulAuthId}, subnet_id = ${subnet.id}
+          SET snmp_auth_id = ${successfulAuthId}, subnet_id = ${subnet.id}
         `);
         return { ip, status: 'success', authId: successfulAuthId };
       }

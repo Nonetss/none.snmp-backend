@@ -4,40 +4,38 @@ import {
   integer,
   timestamp,
   doublePrecision,
+  bigint,
 } from 'drizzle-orm/pg-core';
-import { deviceTable, deviceMetricInstancesTable } from '@/db';
+import { deviceTable } from '@/db/models/device/device.table';
 
-// https://mibbrowser.online/mibdb_search.php?mib=IF-MIB
-
-// 1.3.6.1.2.1.2.2.1 - interfaceTable
+// Inventario de interfaces de red detectadas en el dispositivo.
+// Guarda datos estáticos o que cambian poco (nombre, MAC, velocidad nominal).
 export const interfaceTable = pgTable('interface', {
   id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
-  deviceMetricInstancesId: integer('device_metric_instances_id')
-    .notNull()
-    .references(() => deviceMetricInstancesTable.id),
-  interfaceIndex: integer('interface_index').notNull(), // Indica el índice de la interfaz
-  ifDescr: varchar('if_descr', { length: 255 }).notNull(), // Indica el nombre de la interfaz
-  ifType: integer('if_type').notNull(), // Indica el tipo de la interfaz, por ejemplo, Ethernet, Loopback, etc.
-  ifMtu: integer('if_mtu').notNull(), // Indica el tamaño máximo de los paquetes que puede enviar la interfaz
-  ifSpeed: integer('if_speed').notNull(), // Indica la velocidad de la interfaz en Mbps
-  ifPhysAddress: varchar('if_phys_address', { length: 100 }).notNull(), // Indica la dirección física de la interfaz
   deviceId: integer('device_id')
     .notNull()
     .references(() => deviceTable.id),
+  interfaceIndex: integer('interface_index').notNull(), // El ifIndex de SNMP
+  ifDescr: varchar('if_descr', { length: 255 }), // Descripción del fabricante
+  ifName: varchar('if_name', { length: 255 }), // Nombre de la interfaz (ej: eth0, Gi0/1)
+  ifType: integer('if_type'), // Tipo IANA (ej: 6 para ethernet)
+  ifMtu: integer('if_mtu'),
+  ifSpeed: bigint('if_speed', { mode: 'number' }), // Velocidad en bits por segundo
+  ifPhysAddress: varchar('if_phys_address', { length: 100 }), // Dirección MAC
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
+// Telemetría de interfaces de red (Series temporales).
+// Preparada para TimescaleDB (Hypertable). Guarda estado y tráfico.
 export const interfaceDataTable = pgTable('interface_data', {
-  time: timestamp('time', { withTimezone: true }).notNull(),
   interfaceId: integer('interface_id')
     .notNull()
     .references(() => interfaceTable.id),
-  ifAdminStatus: integer('if_admin_status').notNull(), // Indica si el administrador ha encendido o apagado la interfaz
-  ifOperStatus: integer('if_oper_status').notNull(), // Indica si la interfaz tiene un cable conectado y si este está funcionando correctamente
-  ifLastChange: timestamp('if_last_change', { withTimezone: true }).notNull(), // Indica la fecha y hora de la última vez que la interfaz cambió de estado
-  ifInOctets: doublePrecision('if_in_octets').notNull(), // Indica el número de octetos recibidos por la interfaz
-  ifOutOctets: doublePrecision('if_out_octets').notNull(), // Indica el número de octetos enviados por la interfaz
-  ifInErrors: integer('if_in_errors').notNull(), // Indica el número de errores de recepción
-  ifOutErrors: integer('if_out_errors').notNull(), // Indica el número de errores de transmisión
-  ifInDiscards: integer('if_in_discards').notNull(), // Indica el número de paquetes descartados por la interfaz
-  ifOutDiscards: integer('if_out_discards').notNull(), // Indica el número de paquetes descartados por la interfaz
+  time: timestamp('time', { withTimezone: true }).notNull().defaultNow(), // Marca de tiempo (eje de Timescale)
+  ifAdminStatus: integer('if_admin_status'), // 1=up, 2=down, 3=testing
+  ifOperStatus: integer('if_oper_status'), // Estado real de la línea
+  ifInOctets: bigint('if_in_octets', { mode: 'number' }), // Bytes recibidos (Counter)
+  ifOutOctets: bigint('if_out_octets', { mode: 'number' }), // Bytes enviados (Counter)
+  ifInErrors: integer('if_in_errors'),
+  ifOutErrors: integer('if_out_errors'),
 });
