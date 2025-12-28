@@ -5,7 +5,7 @@ export const getDeviceInterfacesRoute = createRoute({
   method: 'get',
   path: '/{id}/interfaces',
   summary: 'Get network interfaces inventory',
-  tags: ['Device Inventory'],
+  tags: ['Device Interfaces'],
   description:
     'Returns the static inventory of network interfaces for the specified device.',
   request: {

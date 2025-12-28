@@ -5,7 +5,7 @@ export const getDeviceIpRoute = createRoute({
   method: 'get',
   path: '/{id}/ip',
   summary: 'Get device IP and ARP tables',
-  tags: ['Device Inventory'],
+  tags: ['Device IP'],
   request: {
     params: z.object({
       id: z.string().openapi({ example: '1' }),
