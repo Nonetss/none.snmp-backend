@@ -9,6 +9,7 @@ import getDeviceInterfacesRouter from '@/api/v1/snmp/device/interfaces/get/get.i
 // Resources
 import pollResourcesRouter from '@/api/v1/snmp/device/resources/poll/post.index';
 import getDeviceResourcesRouter from '@/api/v1/snmp/device/resources/get/get.index';
+import getDeviceServicesRouter from '@/api/v1/snmp/device/resources/services/get.index';
 
 // IP
 import pollIpRouter from '@/api/v1/snmp/device/ip/poll/post.index';
@@ -29,8 +30,9 @@ deviceRouter.route('/', listRouter);
 deviceRouter.route('/', deleteRouter);
 
 // Inventory routes (GET)
-deviceRouter.route('/', getDeviceInterfacesRouter);
 deviceRouter.route('/', getDeviceResourcesRouter);
+deviceRouter.route('/', getDeviceServicesRouter);
+deviceRouter.route('/', getDeviceInterfacesRouter);
 deviceRouter.route('/', getDeviceIpRouter);
 deviceRouter.route('/', getDeviceSystemRouter);
 deviceRouter.route('/', getDeviceAllRouter);

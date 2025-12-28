@@ -208,6 +208,7 @@ export async function pollResources(deviceId?: number) {
           .map((p: any) => ({
             resourceId: hrResource.id,
             date: timestamp,
+            hrSWRunIndex: p.hrSWRunIndex,
             hrSWRunPerfCPU: Number(p.hrSWRunPerfCPU) || 0,
             hrSWRunPerfMem: Number(p.hrSWRunPerfMem) || 0,
           }));
