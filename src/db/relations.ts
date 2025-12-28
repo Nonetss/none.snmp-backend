@@ -8,7 +8,7 @@ export const relations = defineRelations(schema, (r) => ({
       to: r.subnetTable.id,
     }),
     snmpAuth: r.one.snmpAuthTable({
-      from: r.deviceTable.snmpId,
+      from: r.deviceTable.snmpAuthId,
       to: r.snmpAuthTable.id,
     }),
   },
@@ -21,20 +21,10 @@ export const relations = defineRelations(schema, (r) => ({
   snmpAuthTable: {
     devices: r.many.deviceTable({
       from: r.snmpAuthTable.id,
-      to: r.deviceTable.snmpId,
-    }),
-  },
-  metricsDefinitionTable: {
-    snmpData: r.many.snmpDataTable({
-      from: r.metricsDefinitionTable.id,
-      to: r.snmpDataTable.metricId,
+      to: r.deviceTable.snmpAuthId,
     }),
   },
   snmpDataTable: {
-    metricsDefinition: r.one.metricsDefinitionTable({
-      from: r.snmpDataTable.metricId,
-      to: r.metricsDefinitionTable.id,
-    }),
     device: r.one.deviceTable({
       from: r.snmpDataTable.deviceId,
       to: r.deviceTable.id,

@@ -5,14 +5,18 @@ import {
   timestamp,
   doublePrecision,
 } from 'drizzle-orm/pg-core';
-import { deviceTable } from '@/db';
+import { deviceTable, deviceMetricInstancesTable } from '@/db';
 
 // https://mibbrowser.online/mibdb_search.php?mib=IF-MIB
 
+// 1.3.6.1.2.1.2.2.1 - interfaceTable
 export const interfaceTable = pgTable('interface', {
   id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
-  name: varchar('name', { length: 100 }).notNull(), // Indica el nombre de la interfaz
+  deviceMetricInstancesId: integer('device_metric_instances_id')
+    .notNull()
+    .references(() => deviceMetricInstancesTable.id),
   interfaceIndex: integer('interface_index').notNull(), // Indica el índice de la interfaz
+  ifDescr: varchar('if_descr', { length: 255 }).notNull(), // Indica el nombre de la interfaz
   ifType: integer('if_type').notNull(), // Indica el tipo de la interfaz, por ejemplo, Ethernet, Loopback, etc.
   ifMtu: integer('if_mtu').notNull(), // Indica el tamaño máximo de los paquetes que puede enviar la interfaz
   ifSpeed: integer('if_speed').notNull(), // Indica la velocidad de la interfaz en Mbps
