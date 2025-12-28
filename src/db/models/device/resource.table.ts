@@ -18,9 +18,9 @@ export const resourceTable = pgTable(
     type: varchar('type', { length: 255 }).notNull(),
     value: varchar('value', { length: 255 }).notNull(),
   },
-  (t) => ({
-    unq: uniqueIndex('device_resource_unq_idx').on(t.deviceId, t.name, t.type),
-  }),
+  (t) => [
+    uniqueIndex('device_resource_unq_idx').on(t.deviceId, t.name, t.type),
+  ],
 );
 
 // https://mibbrowser.online/mibdb_search.php?mib=HOST-RESOURCES-MIB
@@ -48,6 +48,7 @@ export const hrSWRunPerfEntryTable = pgTable('hr_sw_run_perf_entry', {
     .notNull()
     .references(() => resourceTable.id),
   date: timestamp('date', { withTimezone: true }).notNull(),
+  hrSWRunIndex: integer('hr_sw_run_index').notNull(),
   hrSWRunPerfCPU: integer('hr_sw_run_perf_cpu').notNull(),
   hrSWRunPerfMem: integer('hr_sw_run_perf_mem').notNull(),
 });
@@ -71,11 +72,8 @@ export const hrSWInstalledEntryTable = pgTable(
       withTimezone: true,
     }).notNull(),
   },
-  (t) => ({
+  (t) => [
     // Evita duplicados por nombre de app en el mismo recurso
-    unq: uniqueIndex('resource_app_name_idx').on(
-      t.resourceId,
-      t.hrSWInstalledName,
-    ),
-  }),
+    uniqueIndex('resource_app_name_idx').on(t.resourceId, t.hrSWInstalledName),
+  ],
 );

@@ -1,0 +1,1 @@
+ALTER TABLE "hr_sw_run_perf_entry" ADD COLUMN "hr_sw_run_index" integer NOT NULL;
