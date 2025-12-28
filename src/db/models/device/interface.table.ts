@@ -26,9 +26,7 @@ export const interfaceTable = pgTable(
     ifPhysAddress: varchar('if_phys_address', { length: 100 }), // Dirección MAC
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
-  (t) => ({
-    unq: uniqueIndex('device_interface_idx').on(t.deviceId, t.ifIndex),
-  }),
+  (t) => [uniqueIndex('device_interface_idx').on(t.deviceId, t.ifIndex)],
 );
 
 // Telemetría de interfaces de red (Series temporales).

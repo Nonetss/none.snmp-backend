@@ -15,9 +15,7 @@ export const ipSnmpTable = pgTable(
       .notNull()
       .references(() => deviceTable.id),
   },
-  (t) => ({
-    unq: uniqueIndex('device_ip_snmp_idx').on(t.deviceId),
-  }),
+  (t) => [uniqueIndex('device_ip_snmp_idx').on(t.deviceId)],
 );
 
 // https://mibbrowser.online/mibdb_search.php?mib=IP-MIB
@@ -36,9 +34,7 @@ export const ipAddrEntryTable = pgTable(
     ipAdEntBcastAddr: varchar('ip_ad_ent_bcast_addr', { length: 20 }).notNull(), // Indica la dirección de broadcast de la interfaz
     ipAdEntReasmMaxSize: integer('ip_ad_ent_reasm_max_size').notNull(), // Indica el tamaño máximo de los paquetes que puede reasemblar la interfaz
   },
-  (t) => ({
-    unq: uniqueIndex('ip_addr_entry_idx').on(t.ipSnmpId, t.ipAdEntAddr),
-  }),
+  (t) => [uniqueIndex('ip_addr_entry_idx').on(t.ipSnmpId, t.ipAdEntAddr)],
 );
 
 // 1.3.6.1.2.1.4.22.1 - ipNetToMediaTable
@@ -58,11 +54,11 @@ export const ipNetToMediaTable = pgTable(
     }).notNull(), // Indica la dirección de red de la interfaz
     ipNetToMediaType: integer('ip_net_to_media_type').notNull(), // Indica el tipo de la interfaz
   },
-  (t) => ({
-    unq: uniqueIndex('ip_net_media_idx').on(
+  (t) => [
+    uniqueIndex('ip_net_media_idx').on(
       t.ipSnmpId,
       t.ipNetToMediaIfIndex,
       t.ipNetToMediaNetAddress,
     ),
-  }),
+  ],
 );

@@ -23,7 +23,5 @@ export const systemTable = pgTable(
     sysLocation: varchar('sys_location', { length: 255 }), // Indica la ubicación del sistema
     sysServices: integer('sys_services'), // Indica los servicios del sistema
   },
-  (t) => ({
-    unq: uniqueIndex('device_system_idx').on(t.deviceId),
-  }),
+  (t) => [uniqueIndex('device_system_idx').on(t.deviceId)],
 );
