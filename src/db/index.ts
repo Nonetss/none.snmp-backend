@@ -11,6 +11,11 @@ import {
   interfaceTable,
   interfaceDataTable,
 } from '@/db/models/device/interface.table';
+import {
+  hrSWRunEntryTable,
+  hrSWRunPerfEntryTable,
+  hrSWInstalledEntryTable,
+} from '@/db/models/device/resource.table';
 
 export {
   deviceTable,
@@ -22,4 +27,7 @@ export {
   deviceMetricInstancesTable,
   interfaceTable,
   interfaceDataTable,
+  hrSWRunEntryTable,
+  hrSWRunPerfEntryTable,
+  hrSWInstalledEntryTable,
 };
