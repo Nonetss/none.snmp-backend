@@ -21,7 +21,7 @@ export const getDeviceIpHandler: RouteHandler<typeof getDeviceIpRoute> = async (
       .select()
       .from(ipAddrEntryTable)
       .where(eq(ipAddrEntryTable.ipSnmpId, ipSnmp.id));
-    const arpTable = await db
+    const fdbTable = await db
       .select()
       .from(ipNetToMediaTable)
       .where(eq(ipNetToMediaTable.ipSnmpId, ipSnmp.id));
@@ -35,7 +35,7 @@ export const getDeviceIpHandler: RouteHandler<typeof getDeviceIpRoute> = async (
           broadcast: a.ipAdEntBcastAddr,
           time: a.time.toISOString(),
         })),
-        arpTable: arpTable.map((a) => ({
+        fdbTable: fdbTable.map((a) => ({
           ifIndex: a.ipNetToMediaIfIndex,
           physAddress: a.ipNetToMediaPhysAddress,
           netAddress: a.ipNetToMediaNetAddress,
