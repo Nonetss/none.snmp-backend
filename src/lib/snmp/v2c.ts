@@ -55,7 +55,10 @@ export async function walkSNMPv2c(
           if (snmp.isVarbindError(vb)) {
             console.error(snmp.varbindError(vb));
           } else {
-            result.push(vb);
+            // Ensure strict subtree matching (handling dot boundaries)
+            if (vb.oid === rootOid || vb.oid.startsWith(rootOid + '.')) {
+              result.push(vb);
+            }
           }
         }
       },
