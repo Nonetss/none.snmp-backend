@@ -15,7 +15,9 @@ const rootSchema = z.object({
 
 const rootRoute = createRoute({
   method: 'get',
-  path: '',
+  path: '/api/health',
+  summary: 'Health check',
+  description: 'Health check',
   request: {},
   responses: {
     200: {
