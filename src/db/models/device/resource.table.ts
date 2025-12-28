@@ -27,7 +27,7 @@ export const hrSWRunEntryTable = pgTable('hr_sw_run_entry', {
 });
 
 //1.3.6.1.2.1.25.5.1.1 - Software Run Performance
-export const hrSWRunPerfEntry = pgTable('hr_sw_run_perf_entry', {
+export const hrSWRunPerfEntryTable = pgTable('hr_sw_run_perf_entry', {
   id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
   date: timestamp('date', { withTimezone: true }).notNull(),
   hrSWRunPerfCPU: integer('hr_sw_run_perf_cpu').notNull(),
