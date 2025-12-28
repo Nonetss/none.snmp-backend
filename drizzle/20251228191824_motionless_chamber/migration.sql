@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "device_system_idx" ON "system" ("device_id");

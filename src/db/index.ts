@@ -21,6 +21,7 @@ import {
   ipAddrEntryTable,
   ipNetToMediaTable,
 } from '@/db/models/device/ipSnmp.table';
+import { systemTable } from '@/db/models/device/system.table';
 
 export {
   deviceTable,
@@ -43,4 +44,6 @@ export {
   ipSnmpTable,
   ipAddrEntryTable,
   ipNetToMediaTable,
+  // System
+  systemTable,
 };
