@@ -7,24 +7,30 @@ import {
 } from 'drizzle-orm/pg-core';
 import { deviceTable } from '@/db';
 
-export const resourceTable = pgTable('resource', {
-  id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
-  deviceId: integer('device_id')
-    .notNull()
-    .references(() => deviceTable.id),
-  name: varchar('name', { length: 255 }).notNull(),
-  type: varchar('type', { length: 255 }).notNull(),
-  value: varchar('value', { length: 255 }).notNull(),
-});
+export const resourceTable = pgTable(
+  'resource',
+  {
+    id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
+    deviceId: integer('device_id')
+      .notNull()
+      .references(() => deviceTable.id),
+    name: varchar('name', { length: 255 }).notNull(),
+    type: varchar('type', { length: 255 }).notNull(),
+    value: varchar('value', { length: 255 }).notNull(),
+  },
+  (t) => ({
+    unq: uniqueIndex('device_resource_unq_idx').on(t.deviceId, t.name, t.type),
+  }),
+);
 
 // https://mibbrowser.online/mibdb_search.php?mib=HOST-RESOURCES-MIB
 
 //1.3.6.1.2.1.25.4.2.1 - Software Run
 export const hrSWRunEntryTable = pgTable('hr_sw_run_entry', {
   id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
-  deviceId: integer('device_id')
+  resourceId: integer('resource_id')
     .notNull()
-    .references(() => deviceTable.id),
+    .references(() => resourceTable.id),
   date: timestamp('date', { withTimezone: true }).notNull(),
   hrSWRunIndex: integer('hr_sw_run_index').notNull(),
   hrSWRunName: varchar('hr_sw_run_name', { length: 255 }).notNull(),
@@ -38,21 +44,22 @@ export const hrSWRunEntryTable = pgTable('hr_sw_run_entry', {
 //1.3.6.1.2.1.25.5.1.1 - Software Run Performance
 export const hrSWRunPerfEntryTable = pgTable('hr_sw_run_perf_entry', {
   id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
-  deviceId: integer('device_id')
+  resourceId: integer('resource_id')
     .notNull()
-    .references(() => deviceTable.id),
+    .references(() => resourceTable.id),
   date: timestamp('date', { withTimezone: true }).notNull(),
   hrSWRunPerfCPU: integer('hr_sw_run_perf_cpu').notNull(),
   hrSWRunPerfMem: integer('hr_sw_run_perf_mem').notNull(),
 });
+
 // 1.3.6.1.2.1.25.6.3.1 - Software Installed
 export const hrSWInstalledEntryTable = pgTable(
   'hr_sw_installed_entry',
   {
     id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
-    deviceId: integer('device_id')
+    resourceId: integer('resource_id')
       .notNull()
-      .references(() => deviceTable.id),
+      .references(() => resourceTable.id),
     date: timestamp('date', { withTimezone: true }).notNull(),
     hrSWInstalledIndex: integer('hr_sw_installed_index').notNull(),
     hrSWInstalledName: varchar('hr_sw_installed_name', {
@@ -65,7 +72,10 @@ export const hrSWInstalledEntryTable = pgTable(
     }).notNull(),
   },
   (t) => ({
-    // Evita duplicados por nombre de app en el mismo dispositivo
-    unq: uniqueIndex('device_app_name_idx').on(t.deviceId, t.hrSWInstalledName),
+    // Evita duplicados por nombre de app en el mismo recurso
+    unq: uniqueIndex('resource_app_name_idx').on(
+      t.resourceId,
+      t.hrSWInstalledName,
+    ),
   }),
 );

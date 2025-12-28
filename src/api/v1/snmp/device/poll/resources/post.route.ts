@@ -4,16 +4,40 @@ import { postPollResourcesSchema } from './post.schema';
 export const postPollResourcesRoute = createRoute({
   method: 'post',
   path: '/resources',
-  summary: 'Poll device resources (processes)',
-  description:
-    'Triggers a manual poll of system resources (running software) for all registered devices.',
+  summary: 'Poll device resources (All devices)',
+  tags: ['SNMP Poll'],
   responses: {
     200: {
+      content: { 'application/json': { schema: postPollResourcesSchema } },
+      description: 'Polling process completed',
+    },
+    500: {
       content: {
         'application/json': {
-          schema: postPollResourcesSchema,
+          schema: z.object({
+            message: z.string(),
+            error: z.string().optional(),
+          }),
         },
       },
+      description: 'Internal server error',
+    },
+  },
+});
+
+export const postPollSingleResourceRoute = createRoute({
+  method: 'post',
+  path: '/{id}/resources',
+  summary: 'Poll device resources (Single device)',
+  tags: ['SNMP Poll'],
+  request: {
+    params: z.object({
+      id: z.string().openapi({ example: '1' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: postPollResourcesSchema } },
       description: 'Polling process completed',
     },
     500: {

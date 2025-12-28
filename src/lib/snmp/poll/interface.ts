@@ -26,7 +26,7 @@ const TARGET_COLUMNS = [
   'ifOutErrors',
 ] as const;
 
-export async function pollInterfaces() {
+export async function pollInterfaces(deviceId?: number) {
   console.time('pollInterfaces');
 
   // 1. Obtener definiciones de métricas
@@ -35,24 +35,31 @@ export async function pollInterfaces() {
     .from(metricObjectsTable)
     .where(inArray(metricObjectsTable.name, TARGET_COLUMNS));
 
-  // 2. Obtener todos los dispositivos con sus credenciales
-  const devices = await db.query.deviceTable.findMany({
-    with: {
-      snmpAuth: true,
-    },
-  });
+  // 2. Obtener dispositivo(s) con select estándar
+  const query = db
+    .select({
+      id: deviceTable.id,
+      ipv4: deviceTable.ipv4,
+      snmpAuth: snmpAuthTable,
+    })
+    .from(deviceTable)
+    .innerJoin(snmpAuthTable, eq(deviceTable.snmpAuthId, snmpAuthTable.id));
+
+  if (deviceId) {
+    query.where(eq(deviceTable.id, deviceId));
+  }
+
+  const devices = await query;
 
   // Procesar cada dispositivo
   for (const device of devices) {
-    if (!device.snmpAuth) continue;
-
     try {
       // Paralelizar las peticiones SNMP
       const promises = metrics.map(async (metric) => {
         try {
           const result = await walkSNMP(
             device.ipv4,
-            device.snmpAuth!,
+            device.snmpAuth,
             metric.oidBase,
           );
           return { name: metric.name, result };
@@ -106,7 +113,7 @@ export async function pollInterfaces() {
         .values(
           interfacesList.map((iface: any) => ({
             deviceId: device.id,
-            ifIndex: iface.ifIndex, // Asegurado que coincide con el esquema
+            ifIndex: iface.ifIndex,
             ifDescr: iface.ifDescr?.toString(),
             ifName: iface.ifName?.toString(),
             ifType: Number(iface.ifType) || null,
