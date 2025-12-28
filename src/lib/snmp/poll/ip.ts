@@ -7,7 +7,7 @@ import {
   ipAddrEntryTable,
   ipNetToMediaTable,
 } from '@/db';
-import { inArray, eq } from 'drizzle-orm';
+import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP } from '@/lib/snmp';
 
 const TARGET_COLUMNS = [
@@ -111,18 +111,18 @@ export async function pollIpSnmp() {
     if (!device.snmpAuth) continue;
 
     try {
-      // Asegurar que existe el registro padre en ip_snmp
-      let [ipSnmpRecord] = await db
+      // Upsert ipSnmpRecord
+      await db
+        .insert(ipSnmpTable)
+        .values({ deviceId: device.id })
+        .onConflictDoNothing({ target: ipSnmpTable.deviceId });
+
+      const [ipSnmpRecord] = await db
         .select()
         .from(ipSnmpTable)
         .where(eq(ipSnmpTable.deviceId, device.id));
 
-      if (!ipSnmpRecord) {
-        [ipSnmpRecord] = await db
-          .insert(ipSnmpTable)
-          .values({ deviceId: device.id })
-          .returning();
-      }
+      if (!ipSnmpRecord) continue;
 
       // Paralelizar walks
       const promises = metrics.map(async (metric) => {
@@ -148,14 +148,12 @@ export async function pollIpSnmp() {
         const isIpAddr = name.startsWith('ipAdEnt');
         const isNetToMedia = name.startsWith('ipNetToMedia');
 
-        // Encontrar el OID base correspondiente para saber dónde cortar el índice
         const metricDef = metrics.find((m) => m.name === name);
         if (!metricDef) continue;
         const baseLen = metricDef.oidBase.split('.').length;
 
         for (const varbind of result) {
           const oidParts = varbind.oid.split('.');
-          // El índice son todos los números después de la base
           const indexKey = oidParts.slice(baseLen).join('.');
 
           if (!indexKey) continue;
@@ -176,7 +174,7 @@ export async function pollIpSnmp() {
       const netList = Array.from(netToMediaMap.values());
       const timestamp = new Date();
 
-      // Insertar ipAddrEntry
+      // Upsert ipAddrEntry
       if (ipList.length > 0) {
         const entries = ipList.map((row: any) => ({
           ipSnmpId: ipSnmpRecord.id,
@@ -187,10 +185,23 @@ export async function pollIpSnmp() {
           ipAdEntBcastAddr: row.ipAdEntBcastAddr || '',
           ipAdEntReasmMaxSize: Number(row.ipAdEntReasmMaxSize) || 0,
         }));
-        await db.insert(ipAddrEntryTable).values(entries);
+
+        await db
+          .insert(ipAddrEntryTable)
+          .values(entries)
+          .onConflictDoUpdate({
+            target: [ipAddrEntryTable.ipSnmpId, ipAddrEntryTable.ipAdEntAddr],
+            set: {
+              time: timestamp,
+              ipAdEntIfIndex: sql.raw('EXCLUDED.ip_ad_ent_if_index'),
+              ipAdEntNetMask: sql.raw('EXCLUDED.ip_ad_ent_net_mask'),
+              ipAdEntBcastAddr: sql.raw('EXCLUDED.ip_ad_ent_bcast_addr'),
+              ipAdEntReasmMaxSize: sql.raw('EXCLUDED.ip_ad_ent_reasm_max_size'),
+            },
+          });
       }
 
-      // Insertar ipNetToMediaTable
+      // Upsert ipNetToMediaTable
       if (netList.length > 0) {
         const entries = netList.map((row: any) => ({
           ipSnmpId: ipSnmpRecord.id,
@@ -200,11 +211,28 @@ export async function pollIpSnmp() {
           ipNetToMediaNetAddress: row.ipNetToMediaNetAddress || '',
           ipNetToMediaType: Number(row.ipNetToMediaType) || 0,
         }));
-        await db.insert(ipNetToMediaTable).values(entries);
+
+        await db
+          .insert(ipNetToMediaTable)
+          .values(entries)
+          .onConflictDoUpdate({
+            target: [
+              ipNetToMediaTable.ipSnmpId,
+              ipNetToMediaTable.ipNetToMediaIfIndex,
+              ipNetToMediaTable.ipNetToMediaNetAddress,
+            ],
+            set: {
+              time: timestamp,
+              ipNetToMediaPhysAddress: sql.raw(
+                'EXCLUDED.ip_net_to_media_phys_address',
+              ),
+              ipNetToMediaMediaType: sql.raw('EXCLUDED.ip_net_to_media_type'),
+            },
+          });
       }
 
       console.log(
-        `[IP Poll] ${device.ipv4}: Insertadas ${ipList.length} IPs y ${netList.length} ARPs.`,
+        `[IP Poll] ${device.ipv4}: Insertadas/Actualizadas ${ipList.length} IPs y ${netList.length} ARPs.`,
       );
     } catch (error) {
       console.error(`Error procesando IP SNMP de ${device.ipv4}:`, error);
