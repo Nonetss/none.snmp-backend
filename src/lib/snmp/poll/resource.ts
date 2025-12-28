@@ -3,16 +3,15 @@ import {
   metricObjectsTable,
   deviceTable,
   snmpAuthTable,
+  resourceTable,
   hrSWRunEntryTable,
   hrSWRunPerfEntryTable,
   hrSWInstalledEntryTable,
 } from '@/db';
-import { inArray, eq, sql } from 'drizzle-orm';
+import { inArray, eq, sql, and } from 'drizzle-orm';
 import { walkSNMP } from '@/lib/snmp';
 
-// Columnas objetivo: Procesos en ejecución + Software Instalado
 const TARGET_COLUMNS = [
-  // hrSWRun (Procesos)
   'hrSWRunIndex',
   'hrSWRunName',
   'hrSWRunID',
@@ -22,7 +21,6 @@ const TARGET_COLUMNS = [
   'hrSWRunStatus',
   'hrSWRunPerfCPU',
   'hrSWRunPerfMem',
-  // hrSWInstalled (Software Instalado)
   'hrSWInstalledIndex',
   'hrSWInstalledName',
   'hrSWInstalledID',
@@ -43,7 +41,6 @@ function parseSnmpDate(buffer: Buffer): Date {
 
 function formatValue(name: string, value: any): any {
   if (value === null || value === undefined) return null;
-
   if (Buffer.isBuffer(value)) {
     if (name === 'hrSWInstalledDate') {
       try {
@@ -67,9 +64,7 @@ function formatValue(name: string, value: any): any {
     }
     return value.toString('utf-8');
   }
-
   if (name === 'hrSWInstalledDate') return new Date(String(value));
-
   if (
     [
       'hrSWRunIndex',
@@ -83,14 +78,12 @@ function formatValue(name: string, value: any): any {
   ) {
     return parseInt(String(value), 10);
   }
-
   return String(value);
 }
 
 export async function pollResources(deviceId?: number) {
   console.time('pollResources');
 
-  // 1. Obtener definiciones
   const metrics = await db
     .select()
     .from(metricObjectsTable)
@@ -101,21 +94,60 @@ export async function pollResources(deviceId?: number) {
     return;
   }
 
-  // 2. Dispositivos
-  const devices = await db.query.deviceTable.findMany({
-    where: deviceId ? eq(deviceTable.id, deviceId) : undefined,
-    with: { snmpAuth: true },
-  });
-  for (const device of devices) {
-    if (!device.snmpAuth) continue;
+  // Usamos select estándar con join para evitar errores relacionales
+  const query = db
+    .select({
+      id: deviceTable.id,
+      ipv4: deviceTable.ipv4,
+      snmpAuth: snmpAuthTable,
+    })
+    .from(deviceTable)
+    .innerJoin(snmpAuthTable, eq(deviceTable.snmpAuthId, snmpAuthTable.id));
 
+  if (deviceId) {
+    query.where(eq(deviceTable.id, deviceId));
+  }
+
+  const devices = await query;
+
+  for (const device of devices) {
     try {
-      // Paralelizar walks
+      // 1. Asegurar registro padre en resourceTable
+      await db
+        .insert(resourceTable)
+        .values({
+          deviceId: device.id,
+          name: 'Host Resources',
+          type: 'SNMP_HR',
+          value: 'Software & Processes',
+        })
+        .onConflictDoNothing({
+          target: [
+            resourceTable.deviceId,
+            resourceTable.name,
+            resourceTable.type,
+          ],
+        });
+
+      const [hrResource] = await db
+        .select()
+        .from(resourceTable)
+        .where(
+          and(
+            eq(resourceTable.deviceId, device.id),
+            eq(resourceTable.name, 'Host Resources'),
+            eq(resourceTable.type, 'SNMP_HR'),
+          ),
+        );
+
+      if (!hrResource) continue;
+
+      // 2. Obtener datos SNMP
       const promises = metrics.map(async (metric) => {
         try {
           const result = await walkSNMP(
             device.ipv4,
-            device.snmpAuth!,
+            device.snmpAuth,
             metric.oidBase,
           );
           return { name: metric.name, result };
@@ -126,7 +158,6 @@ export async function pollResources(deviceId?: number) {
 
       const data = await Promise.all(promises);
 
-      // Agrupadores
       const runMap = new Map<number, Record<string, unknown>>();
       const installedMap = new Map<number, Record<string, unknown>>();
 
@@ -136,33 +167,28 @@ export async function pollResources(deviceId?: number) {
 
         for (const varbind of result) {
           const oidParts = varbind.oid.split('.');
-          const idxStr = oidParts[oidParts.length - 1];
-          const idx = parseInt(idxStr, 10);
-
+          const idx = parseInt(oidParts[oidParts.length - 1], 10);
           if (isNaN(idx)) continue;
 
           if (isRun) {
             if (!runMap.has(idx)) runMap.set(idx, { hrSWRunIndex: idx });
-            const item = runMap.get(idx)!;
-            item[name] = formatValue(name, varbind.value);
+            runMap.get(idx)![name] = formatValue(name, varbind.value);
           } else if (isInstalled) {
             if (!installedMap.has(idx))
               installedMap.set(idx, { hrSWInstalledIndex: idx });
-            const item = installedMap.get(idx)!;
-            item[name] = formatValue(name, varbind.value);
+            installedMap.get(idx)![name] = formatValue(name, varbind.value);
           }
         }
       }
 
       const runList = Array.from(runMap.values());
       const installedList = Array.from(installedMap.values());
-
       const timestamp = new Date();
 
-      // --- Insertar Procesos (Snapshot Log) ---
+      // 3. Inserción de datos
       if (runList.length > 0) {
         const runEntries = runList.map((p: any) => ({
-          deviceId: device.id,
+          resourceId: hrResource.id,
           date: timestamp,
           hrSWRunIndex: p.hrSWRunIndex,
           hrSWRunName: p.hrSWRunName || '',
@@ -180,20 +206,18 @@ export async function pollResources(deviceId?: number) {
               p.hrSWRunPerfCPU !== undefined || p.hrSWRunPerfMem !== undefined,
           )
           .map((p: any) => ({
-            deviceId: device.id,
+            resourceId: hrResource.id,
             date: timestamp,
             hrSWRunPerfCPU: Number(p.hrSWRunPerfCPU) || 0,
             hrSWRunPerfMem: Number(p.hrSWRunPerfMem) || 0,
           }));
-        if (perfEntries.length > 0) {
+        if (perfEntries.length > 0)
           await db.insert(hrSWRunPerfEntryTable).values(perfEntries);
-        }
       }
 
-      // --- Insertar Software Instalado (Inventory Upsert) ---
       if (installedList.length > 0) {
         const installedEntries = installedList.map((p: any) => ({
-          deviceId: device.id,
+          resourceId: hrResource.id,
           date: timestamp,
           hrSWInstalledIndex: p.hrSWInstalledIndex,
           hrSWInstalledName: p.hrSWInstalledName || '',
@@ -210,7 +234,7 @@ export async function pollResources(deviceId?: number) {
           .values(installedEntries)
           .onConflictDoUpdate({
             target: [
-              hrSWInstalledEntryTable.deviceId,
+              hrSWInstalledEntryTable.resourceId,
               hrSWInstalledEntryTable.hrSWInstalledName,
             ],
             set: {
@@ -223,9 +247,7 @@ export async function pollResources(deviceId?: number) {
           });
       }
 
-      console.log(
-        `[Resource Poll] ${device.ipv4}: Insertados ${runList.length} procesos y ${installedList.length} apps instaladas.`,
-      );
+      console.log(`[Resource Poll] ${device.ipv4}: Procesado correctamente.`);
     } catch (error) {
       console.error(`Error procesando recursos de ${device.ipv4}:`, error);
     }

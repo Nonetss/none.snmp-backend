@@ -19,6 +19,14 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.id,
       to: r.deviceMetricInstancesTable.deviceId,
     }),
+    resources: r.many.resourceTable({
+      from: r.deviceTable.id,
+      to: r.resourceTable.deviceId,
+    }),
+    system: r.one.systemTable({
+      from: r.deviceTable.id,
+      to: r.systemTable.deviceId,
+    }),
   },
   subnetTable: {
     devices: r.many.deviceTable({
@@ -82,6 +90,48 @@ export const relations = defineRelations(schema, (r) => ({
     interface: r.one.interfaceTable({
       from: r.interfaceDataTable.interfaceId,
       to: r.interfaceTable.id,
+    }),
+  },
+  resourceTable: {
+    device: r.one.deviceTable({
+      from: r.resourceTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+    swRun: r.many.hrSWRunEntryTable({
+      from: r.resourceTable.id,
+      to: r.hrSWRunEntryTable.resourceId,
+    }),
+    swRunPerf: r.many.hrSWRunPerfEntryTable({
+      from: r.resourceTable.id,
+      to: r.hrSWRunPerfEntryTable.resourceId,
+    }),
+    swInstalled: r.many.hrSWInstalledEntryTable({
+      from: r.resourceTable.id,
+      to: r.hrSWInstalledEntryTable.resourceId,
+    }),
+  },
+  hrSWRunEntryTable: {
+    resource: r.one.resourceTable({
+      from: r.hrSWRunEntryTable.resourceId,
+      to: r.resourceTable.id,
+    }),
+  },
+  hrSWRunPerfEntryTable: {
+    resource: r.one.resourceTable({
+      from: r.hrSWRunPerfEntryTable.resourceId,
+      to: r.resourceTable.id,
+    }),
+  },
+  hrSWInstalledEntryTable: {
+    resource: r.one.resourceTable({
+      from: r.hrSWInstalledEntryTable.resourceId,
+      to: r.resourceTable.id,
+    }),
+  },
+  systemTable: {
+    device: r.one.deviceTable({
+      from: r.systemTable.deviceId,
+      to: r.deviceTable.id,
     }),
   },
 }));

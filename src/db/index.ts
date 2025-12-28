@@ -15,6 +15,7 @@ import {
   hrSWRunEntryTable,
   hrSWRunPerfEntryTable,
   hrSWInstalledEntryTable,
+  resourceTable,
 } from '@/db/models/device/resource.table';
 import {
   ipSnmpTable,
@@ -40,6 +41,7 @@ export {
   hrSWRunEntryTable,
   hrSWRunPerfEntryTable,
   hrSWInstalledEntryTable,
+  resourceTable,
   // IP SNMP
   ipSnmpTable,
   ipAddrEntryTable,
