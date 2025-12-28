@@ -1,8 +1,8 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import authRouter from './auth';
-import scanRouter from './scan';
-import deviceRouter from './device';
-import metricsRouter from './metrics';
+import authRouter from '@/api/v1/snmp/auth';
+import scanRouter from '@/api/v1/snmp/scan';
+import deviceRouter from '@/api/v1/snmp/device';
+import metricsRouter from '@/api/v1/snmp/metrics';
 
 const snmpRouter = new OpenAPIHono();
 

@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { listAuthRoute } from './list.route';
-import { listAuthHandler } from './list.handler';
+import { listAuthRoute } from '@/api/v1/snmp/auth/list/list.route';
+import { listAuthHandler } from '@/api/v1/snmp/auth/list/list.handler';
 
 const router = new OpenAPIHono();
 

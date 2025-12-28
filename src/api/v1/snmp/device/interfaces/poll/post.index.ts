@@ -2,11 +2,11 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import {
   postPollInterfacesRoute,
   postPollSingleInterfaceRoute,
-} from './post.route';
+} from '@/api/v1/snmp/device/interfaces/poll/post.route';
 import {
   postPollInterfacesHandler,
   postPollSingleInterfaceHandler,
-} from './post.handler';
+} from '@/api/v1/snmp/device/interfaces/poll/post.handler';
 
 const postPollInterfacesRouter = new OpenAPIHono();
 

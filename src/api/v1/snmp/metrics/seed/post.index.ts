@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { postSeedRoute } from './post.route';
-import { postSeedHandler } from './post.handler';
+import { postSeedRoute } from '@/api/v1/snmp/metrics/seed/post.route';
+import { postSeedHandler } from '@/api/v1/snmp/metrics/seed/post.handler';
 
 const router = new OpenAPIHono();
 

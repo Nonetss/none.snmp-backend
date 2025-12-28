@@ -1,26 +1,26 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import listRouter from './list/list.index';
-import deleteRouter from './delete/delete.index';
+import listRouter from '@/api/v1/snmp/device/list/list.index';
+import deleteRouter from '@/api/v1/snmp/device/delete/delete.index';
 
 // Interfaces
-import pollInterfacesRouter from './interfaces/poll/post.index';
-import getDeviceInterfacesRouter from './interfaces/get/get.index';
+import pollInterfacesRouter from '@/api/v1/snmp/device/interfaces/poll/post.index';
+import getDeviceInterfacesRouter from '@/api/v1/snmp/device/interfaces/get/get.index';
 
 // Resources
-import pollResourcesRouter from './resources/poll/post.index';
-import getDeviceResourcesRouter from './resources/get/get.index';
+import pollResourcesRouter from '@/api/v1/snmp/device/resources/poll/post.index';
+import getDeviceResourcesRouter from '@/api/v1/snmp/device/resources/get/get.index';
 
 // IP
-import pollIpRouter from './ip/poll/post.index';
-import getDeviceIpRouter from './ip/get/get.index';
+import pollIpRouter from '@/api/v1/snmp/device/ip/poll/post.index';
+import getDeviceIpRouter from '@/api/v1/snmp/device/ip/get/get.index';
 
 // System
-import pollSystemRouter from './system/poll/post.index';
-import getDeviceSystemRouter from './system/get/get.index';
+import pollSystemRouter from '@/api/v1/snmp/device/system/poll/post.index';
+import getDeviceSystemRouter from '@/api/v1/snmp/device/system/get/get.index';
 
 // All
-import pollAllRouter from './all/poll/post.index';
-import getDeviceAllRouter from './all/get/get.index';
+import pollAllRouter from '@/api/v1/snmp/device/all/poll/post.index';
+import getDeviceAllRouter from '@/api/v1/snmp/device/all/get/get.index';
 
 const deviceRouter = new OpenAPIHono();
 

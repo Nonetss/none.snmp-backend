@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { deleteAuthRoute } from './delete.route';
-import { deleteAuthHandler } from './delete.handler';
+import { deleteAuthRoute } from '@/api/v1/snmp/auth/delete/delete.route';
+import { deleteAuthHandler } from '@/api/v1/snmp/auth/delete/delete.handler';
 
 const router = new OpenAPIHono();
 

@@ -37,7 +37,7 @@ const rootHandler: Handler = (c) => {
 
 app.openapi(rootRoute, rootHandler);
 
-import apiRouter from './api';
+import apiRouter from '@/api';
 app.route('/api', apiRouter);
 
 app.get('/', (c) => {

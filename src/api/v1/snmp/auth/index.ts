@@ -1,9 +1,9 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import postRouter from './post/post.index';
-import listRouter from './list/list.index';
-import getRouter from './get/get.index';
-import patchRouter from './patch/patch.index';
-import deleteRouter from './delete/delete.index';
+import postRouter from '@/api/v1/snmp/auth/post/post.index';
+import listRouter from '@/api/v1/snmp/auth/list/list.index';
+import getRouter from '@/api/v1/snmp/auth/get/get.index';
+import patchRouter from '@/api/v1/snmp/auth/patch/patch.index';
+import deleteRouter from '@/api/v1/snmp/auth/delete/delete.index';
 
 const authRouter = new OpenAPIHono();
 

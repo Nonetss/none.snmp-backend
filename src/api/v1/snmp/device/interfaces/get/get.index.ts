@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { getDeviceInterfacesRoute } from './get.route';
-import { getDeviceInterfacesHandler } from './get.handler';
+import { getDeviceInterfacesRoute } from '@/api/v1/snmp/device/interfaces/get/get.route';
+import { getDeviceInterfacesHandler } from '@/api/v1/snmp/device/interfaces/get/get.handler';
 
 const getDeviceInterfacesRouter = new OpenAPIHono();
 

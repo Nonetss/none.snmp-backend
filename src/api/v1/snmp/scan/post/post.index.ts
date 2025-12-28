@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { postScanRoute } from './post.route';
-import { postScanHandler } from './post.handler';
+import { postScanRoute } from '@/api/v1/snmp/scan/post/post.route';
+import { postScanHandler } from '@/api/v1/snmp/scan/post/post.handler';
 
 const router = new OpenAPIHono();
 
