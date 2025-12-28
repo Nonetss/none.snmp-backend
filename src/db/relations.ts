@@ -65,16 +65,6 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceMetricInstancesTable.metricObjectId,
       to: r.metricObjectsTable.id,
     }),
-    data: r.many.snmpDataTable({
-      from: r.deviceMetricInstancesTable.id,
-      to: r.snmpDataTable.deviceMetricInstanceId,
-    }),
-  },
-  snmpDataTable: {
-    instance: r.one.deviceMetricInstancesTable({
-      from: r.snmpDataTable.deviceMetricInstanceId,
-      to: r.deviceMetricInstancesTable.id,
-    }),
   },
   interfaceTable: {
     device: r.one.deviceTable({

@@ -1,7 +1,6 @@
 import { deviceTable } from '@/db/models/device/device.table';
 import { subnetTable } from '@/db/models/subnet.table';
 import { snmpAuthTable } from '@/db/models/snmpAuth.table';
-import { snmpDataTable } from '@/db/models/snmpData.table';
 import {
   metricsDefinitionTable,
   metricObjectsTable,
@@ -29,7 +28,6 @@ export {
   subnetTable,
   // SNMP
   snmpAuthTable,
-  snmpDataTable,
   // Metrics
   metricsDefinitionTable,
   metricObjectsTable,

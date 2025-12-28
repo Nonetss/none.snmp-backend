@@ -1,0 +1,1 @@
+DROP TABLE "snmp_data";
