@@ -3,9 +3,9 @@ import {
   metricObjectsTable,
   deviceTable,
   snmpAuthTable,
-  systemTable as deviceSystemTable, // Alias para evitar conflicto si hubiera
+  systemTable as deviceSystemTable,
 } from '@/db';
-import { inArray, sql } from 'drizzle-orm';
+import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP } from '@/lib/snmp';
 
 // Columnas objetivo de la tabla system
@@ -20,18 +20,13 @@ const TARGET_COLUMNS = [
 
 function formatValue(name: string, value: any): any {
   if (value === null || value === undefined) return null;
-
   if (Buffer.isBuffer(value)) {
     if (name === 'sysServices') {
       return parseInt(value.toString('utf-8') || '0', 10);
     }
     return value.toString('utf-8');
   }
-
-  if (name === 'sysServices') {
-    return parseInt(String(value), 10);
-  }
-
+  if (name === 'sysServices') return parseInt(String(value), 10);
   return String(value);
 }
 
@@ -49,23 +44,29 @@ export async function pollSystem(deviceId?: number) {
     return;
   }
 
-  // 2. Dispositivos
-  const devices = await db.query.deviceTable.findMany({
-    where: deviceId ? eq(deviceTable.id, deviceId) : undefined,
-    with: { snmpAuth: true },
-  });
+  // 2. Obtener dispositivo(s) con select estándar
+  const query = db
+    .select({
+      id: deviceTable.id,
+      ipv4: deviceTable.ipv4,
+      snmpAuth: snmpAuthTable,
+    })
+    .from(deviceTable)
+    .innerJoin(snmpAuthTable, eq(deviceTable.snmpAuthId, snmpAuthTable.id));
+
+  if (deviceId) {
+    query.where(eq(deviceTable.id, deviceId));
+  }
+
+  const devices = await query;
 
   for (const device of devices) {
-    if (!device.snmpAuth) continue;
-
     try {
-      // Paralelizar peticiones
-      // Dado que son escalares, walk devuelve 1 resultado idealmente.
       const promises = metrics.map(async (metric) => {
         try {
           const result = await walkSNMP(
             device.ipv4,
-            device.snmpAuth!,
+            device.snmpAuth,
             metric.oidBase,
           );
           return { name: metric.name, result };
@@ -75,42 +76,35 @@ export async function pollSystem(deviceId?: number) {
       });
 
       const data = await Promise.all(promises);
-
       const systemData: Record<string, any> = {};
 
       for (const { name, result } of data) {
         if (result.length > 0) {
-          const varbind = result[0]; // Tomamos el primero
+          const varbind = result[0];
           let val = varbind.value;
 
-          // Manejo especial para sysUpTime (TimeTicks -> Timestamp de arranque)
           if (name === 'sysUpTime') {
-            // TimeTicks viene en centésimas de segundo (1/100 s)
             const ticks =
               typeof val === 'number' ? val : parseInt(String(val), 10);
             if (!isNaN(ticks)) {
-              // Calculamos fecha de arranque aproximada: Ahora - Ticks
               const now = new Date();
               const bootTime = new Date(now.getTime() - ticks * 10);
               systemData[name] = bootTime;
               continue;
             }
           }
-
           systemData[name] = formatValue(name, val);
         }
       }
 
-      // Si no obtuvimos nada, saltamos
       if (Object.keys(systemData).length === 0) continue;
 
-      // Insert / Upsert
       await db
         .insert(deviceSystemTable)
         .values({
           deviceId: device.id,
           sysDescr: systemData.sysDescr,
-          sysUpTime: systemData.sysUpTime, // Date object
+          sysUpTime: systemData.sysUpTime,
           sysContact: systemData.sysContact,
           sysName: systemData.sysName,
           sysLocation: systemData.sysLocation,
@@ -119,18 +113,16 @@ export async function pollSystem(deviceId?: number) {
         .onConflictDoUpdate({
           target: [deviceSystemTable.deviceId],
           set: {
-            sysDescr: sql.raw('EXCLUDED.sys_descr'),
-            sysUpTime: sql.raw('EXCLUDED.sys_up_time'),
-            sysContact: sql.raw('EXCLUDED.sys_contact'),
-            sysName: sql.raw('EXCLUDED.sys_name'),
-            sysLocation: sql.raw('EXCLUDED.sys_location'),
-            sysServices: sql.raw('EXCLUDED.sys_services'),
+            sysDescr: sql`EXCLUDED.sys_descr`,
+            sysUpTime: sql`EXCLUDED.sys_up_time`,
+            sysContact: sql`EXCLUDED.sys_contact`,
+            sysName: sql`EXCLUDED.sys_name`,
+            sysLocation: sql`EXCLUDED.sys_location`,
+            sysServices: sql`EXCLUDED.sys_services`,
           },
         });
 
-      console.log(
-        `[System Poll] ${device.ipv4}: Datos de sistema actualizados.`,
-      );
+      console.log(`[System Poll] ${device.ipv4}: Datos actualizados.`);
     } catch (error) {
       console.error(`Error procesando System info de ${device.ipv4}:`, error);
     }
