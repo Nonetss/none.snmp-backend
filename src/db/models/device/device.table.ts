@@ -8,5 +8,5 @@ export const deviceTable = pgTable('device', {
   subnetId: integer('subnet_id')
     .notNull()
     .references(() => subnetTable.id),
-  snmpId: integer('snmp_id').references(() => snmpAuthTable.id),
+  snmpAuthId: integer('snmp_auth_id').references(() => snmpAuthTable.id),
 });
