@@ -16,18 +16,31 @@ import {
   hrSWRunPerfEntryTable,
   hrSWInstalledEntryTable,
 } from '@/db/models/device/resource.table';
+import {
+  ipSnmpTable,
+  ipAddrEntryTable,
+  ipNetToMediaTable,
+} from '@/db/models/device/ipSnmp.table';
 
 export {
   deviceTable,
   subnetTable,
+  // SNMP
   snmpAuthTable,
   snmpDataTable,
+  // Metrics
   metricsDefinitionTable,
   metricObjectsTable,
   deviceMetricInstancesTable,
+  // Interfaces
   interfaceTable,
   interfaceDataTable,
+  // Resources
   hrSWRunEntryTable,
   hrSWRunPerfEntryTable,
   hrSWInstalledEntryTable,
+  // IP SNMP
+  ipSnmpTable,
+  ipAddrEntryTable,
+  ipNetToMediaTable,
 };
