@@ -1,1 +1,0 @@
-ALTER TABLE "device" ADD CONSTRAINT "device_ipv4_key" UNIQUE("ipv4");
