@@ -1,16 +1,14 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { postPollInterfacesSchema } from './post.schema';
+import { postPollResourcesSchema } from './post.schema';
 
-export const postPollInterfacesRoute = createRoute({
+export const postPollResourcesRoute = createRoute({
   method: 'post',
-  path: '/interfaces',
-  summary: 'Poll network interfaces (All devices)',
-  tags: ['SNMP Poll'],
-  description:
-    'Triggers a manual poll of all registered device interfaces via SNMP.',
+  path: '/resources',
+  summary: 'Poll device resources (All devices)',
+  tags: ['SNMP Poll', 'Device Resources'],
   responses: {
     200: {
-      content: { 'application/json': { schema: postPollInterfacesSchema } },
+      content: { 'application/json': { schema: postPollResourcesSchema } },
       description: 'Polling process completed',
     },
     500: {
@@ -27,11 +25,11 @@ export const postPollInterfacesRoute = createRoute({
   },
 });
 
-export const postPollSingleInterfaceRoute = createRoute({
+export const postPollSingleResourceRoute = createRoute({
   method: 'post',
-  path: '/{id}/interfaces',
-  summary: 'Poll network interfaces (Single device)',
-  tags: ['SNMP Poll'],
+  path: '/{id}/resources',
+  summary: 'Poll device resources (Single device)',
+  tags: ['SNMP Poll', 'Device Resources'],
   request: {
     params: z.object({
       id: z.string().openapi({ example: '1' }),
@@ -39,7 +37,7 @@ export const postPollSingleInterfaceRoute = createRoute({
   },
   responses: {
     200: {
-      content: { 'application/json': { schema: postPollInterfacesSchema } },
+      content: { 'application/json': { schema: postPollResourcesSchema } },
       description: 'Polling process completed',
     },
     500: {

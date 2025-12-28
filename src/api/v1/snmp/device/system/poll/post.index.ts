@@ -6,11 +6,9 @@ import {
 } from './post.handler';
 
 const postPollSystemRouter = new OpenAPIHono();
-
 postPollSystemRouter.openapi(postPollSystemRoute, postPollSystemHandler);
 postPollSystemRouter.openapi(
   postPollSingleSystemRoute,
   postPollSingleSystemHandler,
 );
-
 export default postPollSystemRouter;
