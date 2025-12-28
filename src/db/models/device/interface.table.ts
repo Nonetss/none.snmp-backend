@@ -7,6 +7,8 @@ import {
 } from 'drizzle-orm/pg-core';
 import { deviceTable } from '@/db';
 
+// https://mibbrowser.online/mibdb_search.php?mib=IF-MIB
+
 export const interfaceTable = pgTable('interface', {
   id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
   name: varchar('name', { length: 100 }).notNull(), // Indica el nombre de la interfaz
