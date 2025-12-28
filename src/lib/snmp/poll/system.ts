@@ -35,7 +35,7 @@ function formatValue(name: string, value: any): any {
   return String(value);
 }
 
-export async function pollSystem() {
+export async function pollSystem(deviceId?: number) {
   console.time('pollSystem');
 
   // 1. Obtener definiciones
@@ -51,6 +51,7 @@ export async function pollSystem() {
 
   // 2. Dispositivos
   const devices = await db.query.deviceTable.findMany({
+    where: deviceId ? eq(deviceTable.id, deviceId) : undefined,
     with: { snmpAuth: true },
   });
 

@@ -26,7 +26,7 @@ const TARGET_COLUMNS = [
   'ifOutErrors',
 ] as const;
 
-export async function pollInterfaces() {
+export async function pollInterfaces(deviceId?: number) {
   console.time('pollInterfaces');
 
   // 1. Obtener definiciones de métricas
@@ -35,8 +35,9 @@ export async function pollInterfaces() {
     .from(metricObjectsTable)
     .where(inArray(metricObjectsTable.name, TARGET_COLUMNS));
 
-  // 2. Obtener todos los dispositivos con sus credenciales
+  // 2. Obtener dispositivo(s)
   const devices = await db.query.deviceTable.findMany({
+    where: deviceId ? eq(deviceTable.id, deviceId) : undefined,
     with: {
       snmpAuth: true,
     },

@@ -88,7 +88,7 @@ function formatValue(name: string, value: any): any {
   return String(value);
 }
 
-export async function pollIpSnmp() {
+export async function pollIpSnmp(deviceId?: number) {
   console.time('pollIpSnmp');
 
   // 1. Obtener definiciones
@@ -104,6 +104,7 @@ export async function pollIpSnmp() {
 
   // 2. Dispositivos
   const devices = await db.query.deviceTable.findMany({
+    where: deviceId ? eq(deviceTable.id, deviceId) : undefined,
     with: { snmpAuth: true },
   });
 
