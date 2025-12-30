@@ -1,12 +1,10 @@
 services:
   app:
     container_name: snmp-backend
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: gitea.sanjuandediosmalaga.es/casjd/snmp-backend:v2
     restart: always
     ports:
-      - '3000:3000'
+      - '3083:3000'
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - NODE_ENV=production
