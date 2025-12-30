@@ -8,15 +8,27 @@ export const connectionSearchSchema = z.object({
 });
 
 export const connectionResultSchema = z.object({
-  deviceId: z.number(),
-  deviceName: z.string().nullable(),
-  deviceIp: z.string(),
-  ifIndex: z.number(),
-  ifName: z.string().nullable(),
-  ifDescr: z.string().nullable(),
+  switchId: z.number(),
+  switchName: z.string().nullable(),
+  switchIp: z.string(),
+  switchLocation: z.string().nullable(),
+  switchDescription: z.string().nullable(),
+  bridgePort: z.number(),
+  interface: z
+    .object({
+      id: z.number(),
+      ifIndex: z.number(),
+      ifName: z.string().nullable(),
+      ifDescr: z.string().nullable(),
+      ifType: z.number().nullable(),
+      ifMtu: z.number().nullable(),
+      ifSpeed: z.string().nullable(),
+      ifPhysAddress: z.string().nullable(),
+    })
+    .nullable(),
   macAddress: z.string(),
-  ipAddress: z.string(),
-  type: z.number(),
+  ipAddress: z.string().nullable(),
+  status: z.number().nullable(),
   lastSeen: z.string(),
 });
 
