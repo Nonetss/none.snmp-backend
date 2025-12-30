@@ -112,3 +112,13 @@ export function formatVarbinds(varbinds: snmp.Varbind[]) {
     type: v.type,
   }));
 }
+
+/**
+ * Sanitiza una cadena eliminando caracteres nulos (\0) que PostgreSQL no soporta en tipos varchar/text.
+ */
+export function sanitizeString(val: any): string {
+  if (val === null || val === undefined) return '';
+  const str = Buffer.isBuffer(val) ? val.toString('utf-8') : String(val);
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/\x00/g, '').trim();
+}
