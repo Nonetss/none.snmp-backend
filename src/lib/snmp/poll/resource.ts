@@ -221,18 +221,27 @@ export async function pollResources(deviceId?: number) {
       }
 
       if (installedList.length > 0) {
-        const installedEntries = installedList.map((p: any) => ({
-          resourceId: hrResource.id,
-          date: timestamp,
-          hrSWInstalledIndex: p.hrSWInstalledIndex,
-          hrSWInstalledName: p.hrSWInstalledName || '',
-          hrSWInstalledID: p.hrSWInstalledID || '0.0',
-          hrSWInstalledType: Number(p.hrSWInstalledType) || 0,
-          hrSWInstalledDate:
-            p.hrSWInstalledDate instanceof Date
-              ? p.hrSWInstalledDate
-              : new Date(),
-        }));
+        const uniqueInstalledMap = new Map<string, any>();
+
+        installedList.forEach((p: any) => {
+          const name = p.hrSWInstalledName || '';
+          const entry = {
+            resourceId: hrResource.id,
+            date: timestamp,
+            hrSWInstalledIndex: p.hrSWInstalledIndex,
+            hrSWInstalledName: name,
+            hrSWInstalledID: p.hrSWInstalledID || '0.0',
+            hrSWInstalledType: Number(p.hrSWInstalledType) || 0,
+            hrSWInstalledDate:
+              p.hrSWInstalledDate instanceof Date
+                ? p.hrSWInstalledDate
+                : new Date(),
+          };
+          // Si hay duplicados por nombre, el último prevalece (evita error ON CONFLICT en la misma query)
+          uniqueInstalledMap.set(name, entry);
+        });
+
+        const installedEntries = Array.from(uniqueInstalledMap.values());
 
         await db
           .insert(hrSWInstalledEntryTable)

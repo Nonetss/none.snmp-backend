@@ -117,9 +117,18 @@ export async function pollRoutes(deviceId?: number) {
         }
       }
 
-      const routeEntries = Array.from(routesMap.values());
+      const routeEntriesRaw = Array.from(routesMap.values());
 
-      if (routeEntries.length > 0) {
+      if (routeEntriesRaw.length > 0) {
+        // De-duplicar por (dest, nextHop) para evitar error de ON CONFLICT en la misma query
+        const uniqueRoutesMap = new Map<string, any>();
+        routeEntriesRaw.forEach((r) => {
+          const key = `${r.ipCidrRouteDest}_${r.ipCidrRouteNextHop}`;
+          uniqueRoutesMap.set(key, r);
+        });
+
+        const routeEntries = Array.from(uniqueRoutesMap.values());
+
         await db
           .insert(routeTable)
           .values(
