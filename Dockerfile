@@ -32,6 +32,12 @@ COPY --from=prerelease /app/src src
 COPY --from=prerelease /app/tsconfig.json .
 COPY --from=prerelease /app/package.json .
 
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    ping \
+    && rm -rf /var/lib/apt/lists/*
+
 # Run the app
 USER bun
 EXPOSE 3000/tcp
