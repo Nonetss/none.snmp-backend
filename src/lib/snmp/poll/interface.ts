@@ -7,7 +7,7 @@ import {
   interfaceDataTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP } from '@/lib/snmp';
+import { walkSNMP, sanitizeString } from '@/lib/snmp';
 
 // Columnas que esperamos recuperar
 const TARGET_COLUMNS = [
@@ -98,7 +98,13 @@ export async function pollInterfaces(deviceId?: number) {
             } else if (['ifIndex', 'ifType', 'ifMtu'].includes(name)) {
               value = parseInt(varbind.value.toString('utf-8') || '0', 10);
             } else {
-              value = varbind.value.toString('utf8');
+              value = sanitizeString(varbind.value);
+            }
+          } else {
+            if (['ifIndex', 'ifType', 'ifMtu'].includes(name)) {
+              value = parseInt(String(varbind.value) || '0', 10);
+            } else if (name !== 'ifPhysAddress') {
+              value = sanitizeString(varbind.value);
             }
           }
           iface[name] = value;
@@ -119,12 +125,12 @@ export async function pollInterfaces(deviceId?: number) {
           interfacesList.map((iface: any) => ({
             deviceId: device.id,
             ifIndex: iface.ifIndex,
-            ifDescr: iface.ifDescr?.toString(),
-            ifName: iface.ifName?.toString(),
+            ifDescr: iface.ifDescr?.toString() || null,
+            ifName: iface.ifName?.toString() || null,
             ifType: Number(iface.ifType) || null,
             ifMtu: Number(iface.ifMtu) || null,
-            ifSpeed: iface.ifSpeed?.toString(),
-            ifPhysAddress: iface.ifPhysAddress?.toString(),
+            ifSpeed: iface.ifSpeed?.toString() || null,
+            ifPhysAddress: iface.ifPhysAddress?.toString() || null,
           })),
         )
         .onConflictDoUpdate({

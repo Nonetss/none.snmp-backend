@@ -9,7 +9,7 @@ import {
   hrSWInstalledEntryTable,
 } from '@/db';
 import { inArray, eq, sql, and } from 'drizzle-orm';
-import { walkSNMP } from '@/lib/snmp';
+import { walkSNMP, sanitizeString } from '@/lib/snmp';
 
 const TARGET_COLUMNS = [
   'hrSWRunIndex',
@@ -62,7 +62,7 @@ function formatValue(name: string, value: any): any {
     ) {
       return parseInt(value.toString('utf-8') || '0', 10);
     }
-    return value.toString('utf-8');
+    return sanitizeString(value);
   }
   if (name === 'hrSWInstalledDate') return new Date(String(value));
   if (
@@ -78,7 +78,7 @@ function formatValue(name: string, value: any): any {
   ) {
     return parseInt(String(value), 10);
   }
-  return String(value);
+  return sanitizeString(value);
 }
 
 export async function pollResources(deviceId?: number) {

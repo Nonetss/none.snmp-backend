@@ -6,7 +6,7 @@ import {
   systemTable as deviceSystemTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP } from '@/lib/snmp';
+import { walkSNMP, sanitizeString } from '@/lib/snmp';
 
 // Columnas objetivo de la tabla system
 const TARGET_COLUMNS = [
@@ -24,10 +24,10 @@ function formatValue(name: string, value: any): any {
     if (name === 'sysServices') {
       return parseInt(value.toString('utf-8') || '0', 10);
     }
-    return value.toString('utf-8');
+    return sanitizeString(value);
   }
   if (name === 'sysServices') return parseInt(String(value), 10);
-  return String(value);
+  return sanitizeString(value);
 }
 
 export async function pollSystem(deviceId?: number) {

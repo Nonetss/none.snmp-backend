@@ -8,7 +8,7 @@ import {
   ipNetToMediaTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP } from '@/lib/snmp';
+import { walkSNMP, sanitizeString } from '@/lib/snmp';
 
 const TARGET_COLUMNS = [
   'ipAdEntAddr',
@@ -63,8 +63,8 @@ function formatValue(name: string, value: any): any {
     if (isBuffer) return parseInt(value.toString('utf-8') || '0', 10);
     return parseInt(String(value), 10);
   }
-  if (isBuffer) return value.toString('utf-8');
-  return String(value);
+  if (isBuffer) return sanitizeString(value);
+  return sanitizeString(value);
 }
 
 export async function pollIpSnmp(deviceId?: number) {
