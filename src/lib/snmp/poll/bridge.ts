@@ -151,8 +151,14 @@ export async function pollBridge(deviceId?: number) {
           });
         });
 
-        const portEntries = Array.from(portsMap.values());
-        if (portEntries.length > 0) {
+        const portEntriesRaw = Array.from(portsMap.values());
+        if (portEntriesRaw.length > 0) {
+          // De-duplicar por bridgePort (ya debería estarlo por el Map, pero aseguramos)
+          const uniquePortsMap = new Map<number, any>();
+          portEntriesRaw.forEach((p) => uniquePortsMap.set(p.bridgePort, p));
+
+          const portEntries = Array.from(uniquePortsMap.values());
+
           await db
             .insert(bridgePortTable)
             .values(
@@ -193,6 +199,8 @@ export async function pollBridge(deviceId?: number) {
           res.forEach((vb) => {
             const parts = vb.oid.split('.');
             const vlanId = parseInt(parts[parts.length - 1], 10);
+            if (isNaN(vlanId)) return;
+
             if (!vlansMap.has(vlanId)) vlansMap.set(vlanId, { vlanId });
 
             let val = vb.value;
@@ -207,8 +215,14 @@ export async function pollBridge(deviceId?: number) {
           });
         });
 
-        const vlanEntries = Array.from(vlansMap.values());
-        if (vlanEntries.length > 0) {
+        const vlanEntriesRaw = Array.from(vlansMap.values());
+        if (vlanEntriesRaw.length > 0) {
+          // De-duplicar por vlanId
+          const uniqueVlansMap = new Map<number, any>();
+          vlanEntriesRaw.forEach((v) => uniqueVlansMap.set(v.vlanId, v));
+
+          const vlanEntries = Array.from(uniqueVlansMap.values());
+
           await db
             .insert(vlanTable)
             .values(
@@ -261,8 +275,14 @@ export async function pollBridge(deviceId?: number) {
           });
         });
 
-        const fdbEntries = Array.from(fdbMap.values());
-        if (fdbEntries.length > 0) {
+        const fdbEntriesRaw = Array.from(fdbMap.values());
+        if (fdbEntriesRaw.length > 0) {
+          // De-duplicar por address
+          const uniqueFdbMap = new Map<string, any>();
+          fdbEntriesRaw.forEach((f) => uniqueFdbMap.set(f.address, f));
+
+          const fdbEntries = Array.from(uniqueFdbMap.values());
+
           await db
             .insert(bridgeFdbTable)
             .values(
@@ -320,8 +340,16 @@ export async function pollBridge(deviceId?: number) {
           });
         });
 
-        const fdbQEntries = Array.from(fdbQMap.values());
-        if (fdbQEntries.length > 0) {
+        const fdbQEntriesRaw = Array.from(fdbQMap.values());
+        if (fdbQEntriesRaw.length > 0) {
+          // De-duplicar por (vlanId, address)
+          const uniqueFdbQMap = new Map<string, any>();
+          fdbQEntriesRaw.forEach((f) =>
+            uniqueFdbQMap.set(`${f.vlanId}_${f.address}`, f),
+          );
+
+          const fdbQEntries = Array.from(uniqueFdbQMap.values());
+
           await db
             .insert(bridgeFdbQTable)
             .values(
