@@ -11,6 +11,7 @@ const MIB_FILES = [
   'IF-MIB.json',
   'IP-MIB.json',
   'SNMPv2-MIB.json',
+  'BRIDGE-MIB.json',
 ];
 
 function mapDataType(

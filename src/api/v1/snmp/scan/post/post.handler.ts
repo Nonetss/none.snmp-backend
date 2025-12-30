@@ -4,7 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postScanRoute } from './post.route';
 import { pingHost } from '@/lib/icmp';
-import { walkSNMP } from '@/lib/snmp';
+import { walkSNMP, getSNMP } from '@/lib/snmp';
 import * as ipaddr from 'ipaddr.js';
 
 function getAllIps(cidr: string): string[] {
@@ -72,8 +72,8 @@ export const postScanHandler: RouteHandler<typeof postScanRoute> = async (
 
       for (const auth of allAuths) {
         try {
-          // Timeout corto para el walk individual durante el escaneo
-          const varbinds = await walkSNMP(ip, auth, '1.3.6.1.2.1.1.1');
+          // Usar GET en lugar de WALK para verificar credenciales es más rápido y compatible
+          const varbinds = await getSNMP(ip, auth, ['1.3.6.1.2.1.1.1.0'], 1000);
           if (varbinds.length > 0) {
             successfulAuthId = auth.id;
             break;

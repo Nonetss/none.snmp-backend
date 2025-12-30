@@ -57,4 +57,5 @@ app.get('/scalar', Scalar({ url: '/doc' }));
 Bun.serve({
   port: 3000,
   fetch: app.fetch,
+  idleTimeout: 0,
 });
