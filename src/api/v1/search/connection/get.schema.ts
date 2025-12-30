@@ -12,23 +12,25 @@ export const connectionResultSchema = z.object({
   switchName: z.string().nullable(),
   switchIp: z.string(),
   switchLocation: z.string().nullable(),
-  switchDescription: z.string().nullable(),
   bridgePort: z.number(),
+  portMacCount: z.number().openapi({
+    description:
+      'Total number of MAC addresses learned on this port. Low numbers (1-2) usually indicate an access port.',
+  }),
+  isMostLikely: z.boolean().openapi({
+    description:
+      'True if this is the port with the fewest MAC addresses, likely being the physical connection point.',
+  }),
   interface: z
     .object({
-      id: z.number(),
-      ifIndex: z.number(),
       ifName: z.string().nullable(),
       ifDescr: z.string().nullable(),
-      ifType: z.number().nullable(),
-      ifMtu: z.number().nullable(),
       ifSpeed: z.string().nullable(),
-      ifPhysAddress: z.string().nullable(),
+      ifType: z.string().nullable(),
     })
     .nullable(),
   macAddress: z.string(),
   ipAddress: z.string().nullable(),
-  status: z.number().nullable(),
   lastSeen: z.string(),
 });
 

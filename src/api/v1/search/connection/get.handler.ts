@@ -7,9 +7,34 @@ import {
   ipNetToMediaTable,
   systemTable,
 } from '@/db';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getConnectionSearchRoute } from './get.route';
+
+// --- HELPERS DE TRADUCCIÓN ---
+
+const IF_TYPES: Record<string, string> = {
+  '1': 'other',
+  '6': 'ethernetCsmacd',
+  '24': 'softwareLoopback',
+  '32': 'frameRelay',
+  '53': 'propVirtual', // VLANs usualmente
+  '117': 'gigabitEthernet',
+  '131': 'tunnel',
+  '135': 'l2vlan',
+  '161': 'ieee8023adLag', // Port Channels / EtherChannels
+};
+
+const formatSpeed = (speed: number | null): string | null => {
+  if (speed === null || speed === undefined) return null;
+  if (speed === 0) return '0 bps';
+  if (speed >= 1000000000) return `${speed / 1000000000} Gbps`;
+  if (speed >= 1000000) return `${speed / 1000000} Mbps`;
+  if (speed >= 1000) return `${speed / 1000} Kbps`;
+  return `${speed} bps`;
+};
+
+// --- HANDLER PRINCIPAL ---
 
 export const getConnectionSearchHandler: RouteHandler<
   typeof getConnectionSearchRoute
@@ -18,9 +43,9 @@ export const getConnectionSearchHandler: RouteHandler<
 
   try {
     let targetMacs: string[] = [query.toUpperCase()];
-    const ipMap = new Map<string, string>(); // MAC -> IP
+    const ipMap = new Map<string, string>();
 
-    // 1. Si el query parece una IP, buscamos su MAC en las tablas ARP
+    // 0. Lógica de búsqueda por IP si aplica
     if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(query)) {
       const arpEntries = await db
         .select()
@@ -31,41 +56,28 @@ export const getConnectionSearchHandler: RouteHandler<
         targetMacs = arpEntries.map((e) => e.ipNetToMediaPhysAddress);
         arpEntries.forEach((e) => ipMap.set(e.ipNetToMediaPhysAddress, query));
       } else {
-        targetMacs = [];
+        return c.json([], 200);
       }
     }
 
-    if (targetMacs.length === 0) {
-      return c.json([], 200);
-    }
-
-    // 2. Buscar en la tabla FDB y unir con System e Interface
-    const results = await db
+    // 1. Encontrar en qué switches/puertos está la MAC
+    const fdbEntries = await db
       .select({
         switchId: deviceTable.id,
         switchName: systemTable.sysName,
         switchIp: deviceTable.ipv4,
         switchLocation: systemTable.sysLocation,
-        switchDescription: systemTable.sysDescr,
         bridgePort: bridgeFdbTable.port,
-        // Datos de la interfaz
-        interfaceId: interfaceTable.id,
-        ifIndex: interfaceTable.ifIndex,
         ifName: interfaceTable.ifName,
         ifDescr: interfaceTable.ifDescr,
-        ifType: interfaceTable.ifType,
-        ifMtu: interfaceTable.ifMtu,
         ifSpeed: interfaceTable.ifSpeed,
-        ifPhysAddress: interfaceTable.ifPhysAddress,
-        // Datos del FDB
+        ifType: interfaceTable.ifType,
         macAddress: bridgeFdbTable.address,
-        status: bridgeFdbTable.status,
         lastSeen: bridgeFdbTable.updatedAt,
       })
       .from(bridgeFdbTable)
       .innerJoin(deviceTable, eq(bridgeFdbTable.deviceId, deviceTable.id))
       .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
-      // Mapear el puerto del bridge al ifIndex físico
       .leftJoin(
         bridgePortTable,
         and(
@@ -73,7 +85,6 @@ export const getConnectionSearchHandler: RouteHandler<
           eq(bridgePortTable.bridgePort, bridgeFdbTable.port),
         ),
       )
-      // Obtener detalles de la interfaz física conectada
       .leftJoin(
         interfaceTable,
         and(
@@ -83,37 +94,64 @@ export const getConnectionSearchHandler: RouteHandler<
       )
       .where(inArray(bridgeFdbTable.address, targetMacs));
 
-    return c.json(
-      results.map((r) => ({
+    if (fdbEntries.length === 0) return c.json([], 200);
+
+    // 2. Para cada puerto encontrado, contar cuántas MACs totales tiene
+    const resultsWithCount = await Promise.all(
+      fdbEntries.map(async (entry) => {
+        const [{ count }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(bridgeFdbTable)
+          .where(
+            and(
+              eq(bridgeFdbTable.deviceId, entry.switchId),
+              eq(bridgeFdbTable.port, entry.bridgePort),
+            ),
+          );
+
+        return {
+          ...entry,
+          portMacCount: Number(count),
+        };
+      }),
+    );
+
+    // 3. Identificar el "Most Likely" y transformar tipos a String
+    const minMacs = Math.min(...resultsWithCount.map((r) => r.portMacCount));
+
+    const finalResults = resultsWithCount
+      .map((r) => ({
         switchId: r.switchId,
         switchName: r.switchName,
         switchIp: r.switchIp,
         switchLocation: r.switchLocation,
-        switchDescription: r.switchDescription,
         bridgePort: r.bridgePort,
-        interface: r.interfaceId
-          ? {
-              id: r.interfaceId,
-              ifIndex: r.ifIndex!,
-              ifName: r.ifName,
-              ifDescr: r.ifDescr,
-              ifType: r.ifType,
-              ifMtu: r.ifMtu,
-              ifSpeed: r.ifSpeed ? String(r.ifSpeed) : null,
-              ifPhysAddress: r.ifPhysAddress,
-            }
-          : null,
+        portMacCount: r.portMacCount,
+        isMostLikely: r.portMacCount === minMacs,
+        interface:
+          r.ifName || r.ifDescr
+            ? {
+                ifName: r.ifName,
+                ifDescr: r.ifDescr,
+                // Transformación de Integer a String legible
+                ifSpeed: formatSpeed(r.ifSpeed ? Number(r.ifSpeed) : null),
+                // Transformación de Integer a Nombre de Tipo
+                ifType: r.ifType
+                  ? IF_TYPES[String(r.ifType)] || `unknown(${r.ifType})`
+                  : 'unknown',
+              }
+            : null,
         macAddress: r.macAddress,
         ipAddress: ipMap.get(r.macAddress) || null,
-        status: r.status,
         lastSeen: r.lastSeen
           ? r.lastSeen.toISOString()
           : new Date().toISOString(),
-      })),
-      200,
-    );
+      }))
+      .sort((a, b) => a.portMacCount - b.portMacCount);
+
+    return c.json(finalResults, 200);
   } catch (error) {
-    console.error(`[Connection Search] Error searching for ${query}:`, error);
+    console.error(`[Connection Search] Error:`, error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };
