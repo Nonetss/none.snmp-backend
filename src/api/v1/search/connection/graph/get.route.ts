@@ -9,7 +9,7 @@ export const getSwitchConnectionsRoute = createRoute({
   method: 'get',
   path: '/graph/switch',
   summary: 'Get switch-to-switch connections',
-  tags: ['Search Connection', 'Topology'],
+  tags: ['Search', 'Search Connection'],
   description:
     'Analyzes LLDP neighbors to return a list of physical connections between switches and other network infrastructure.',
   request: {
