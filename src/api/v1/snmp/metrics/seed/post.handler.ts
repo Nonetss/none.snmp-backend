@@ -14,6 +14,10 @@ const MIB_FILES = [
   'BRIDGE-MIB.json',
   'CISCO-CDP-MIB.json',
   'LLDP-MIB.json',
+  'OSPF-MIB.json',
+  'Q-BRIDGE-MIB.json',
+  'ENTITY-MIB.json',
+  'IP-FORWARD-MIB.json',
 ];
 
 function mapDataType(
