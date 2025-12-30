@@ -26,6 +26,7 @@ import {
   bridgePortTable,
   bridgeFdbTable,
 } from '@/db/models/device/bridge.table';
+import { cdpNeighborTable } from '@/db/models/device/cdp.table';
 
 export {
   deviceTable,
@@ -53,4 +54,6 @@ export {
   bridgeBaseTable,
   bridgePortTable,
   bridgeFdbTable,
+  // CDP
+  cdpNeighborTable,
 };

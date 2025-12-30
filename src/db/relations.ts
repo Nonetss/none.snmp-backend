@@ -35,6 +35,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.id,
       to: r.bridgeFdbTable.deviceId,
     }),
+    cdpNeighbors: r.many.cdpNeighborTable({
+      from: r.deviceTable.id,
+      to: r.cdpNeighborTable.deviceId,
+    }),
   },
   subnetTable: {
     devices: r.many.deviceTable({
@@ -133,6 +137,12 @@ export const relations = defineRelations(schema, (r) => ({
   bridgeFdbTable: {
     device: r.one.deviceTable({
       from: r.bridgeFdbTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+  },
+  cdpNeighborTable: {
+    device: r.one.deviceTable({
+      from: r.cdpNeighborTable.deviceId,
       to: r.deviceTable.id,
     }),
   },
