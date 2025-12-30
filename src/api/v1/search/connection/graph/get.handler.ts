@@ -82,6 +82,23 @@ export const getSwitchConnectionsHandler: RouteHandler<
       };
     });
 
+    // --- Lógica de tipos basada en el grado de conexión ---
+    const degrees = new Map<string, number>();
+    connections.forEach((conn) => {
+      const src = conn.source.name;
+      const tgt = conn.target.name || conn.target.port.id;
+      degrees.set(src, (degrees.get(src) || 0) + 1);
+      degrees.set(tgt, (degrees.get(tgt) || 0) + 1);
+    });
+
+    const getNodeType = (name: string) => {
+      const d = degrees.get(name) || 0;
+      if (d >= 6) return { type: 'Core', shape: ['((', '))'], color: '#f96' };
+      if (d >= 3)
+        return { type: 'Distribution', shape: ['([', '])'], color: '#6cf' };
+      return { type: 'Access', shape: ['[', ']'], color: '#fff' };
+    };
+
     // 4. Formatear según el parámetro solicitado
     if (format === 'simple') {
       const simplified = connections.map((item) => {
@@ -104,8 +121,16 @@ export const getSwitchConnectionsHandler: RouteHandler<
 
     if (format === 'mermaid') {
       const lines: string[] = ['graph LR'];
-      const definedNodes = new Set<string>();
 
+      // Añadir definiciones de clases para colores
+      lines.push('    classDef Core fill:#f96,stroke:#333,stroke-width:2px');
+      lines.push(
+        '    classDef Distribution fill:#6cf,stroke:#333,stroke-width:2px',
+      );
+      lines.push('    classDef Access fill:#fff,stroke:#333,stroke-width:1px');
+      lines.push('');
+
+      const definedNodes = new Set<string>();
       const sanitize = (val: string) => val.replace(/[-.: ]/g, '_');
 
       connections.forEach((link) => {
@@ -116,23 +141,31 @@ export const getSwitchConnectionsHandler: RouteHandler<
         const srcLabel = source.ip
           ? `${source.name} <br/> ${source.ip}`
           : source.name;
+        const srcMeta = getNodeType(source.name);
 
         // --- DESTINO ---
         const targetRawName = target.name || target.port.id;
         const tgtId = sanitize(targetRawName);
         const tgtLabel = targetRawName;
+        const tgtMeta = getNodeType(targetRawName);
 
         // --- PUERTOS ---
         const srcPort = source.port.name || source.port.num.toString();
         const tgtPort = target.port.id;
 
-        // Definición de nodos
+        // Definición de nodos con formas y clases de color
         if (!definedNodes.has(srcId)) {
-          lines.push(`    ${srcId}["${srcLabel}"]`);
+          lines.push(
+            `    ${srcId}${srcMeta.shape[0]}"${srcLabel}"${srcMeta.shape[1]}`,
+          );
+          lines.push(`    class ${srcId} ${srcMeta.type}`);
           definedNodes.add(srcId);
         }
         if (!definedNodes.has(tgtId)) {
-          lines.push(`    ${tgtId}["${tgtLabel}"]`);
+          lines.push(
+            `    ${tgtId}${tgtMeta.shape[0]}"${tgtLabel}"${tgtMeta.shape[1]}`,
+          );
+          lines.push(`    class ${tgtId} ${tgtMeta.type}`);
           definedNodes.add(tgtId);
         }
 
@@ -140,10 +173,21 @@ export const getSwitchConnectionsHandler: RouteHandler<
         lines.push(`    ${srcId} -- "${srcPort} <-> ${tgtPort}" --- ${tgtId}`);
       });
 
+      // Retornar texto plano directamente
       return c.text(lines.join('\n'), 200);
     }
 
-    return c.json(connections, 200);
+    return c.json(
+      connections.map((c) => ({
+        ...c,
+        source: { ...c.source, type: getNodeType(c.source.name).type },
+        target: {
+          ...c.target,
+          type: getNodeType(c.target.name || c.target.port.id).type,
+        },
+      })),
+      200,
+    );
   } catch (error) {
     console.error(`[Switch Connections] Error:`, error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;

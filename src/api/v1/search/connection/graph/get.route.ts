@@ -22,11 +22,13 @@ export const getSwitchConnectionsRoute = createRoute({
           schema: z.union([
             getSwitchConnectionsResponseSchema,
             z.array(networkEdgeSchema),
-            z.object({ graph: z.string() }),
           ]),
         },
+        'text/plain': {
+          schema: z.string(),
+        },
       },
-      description: 'List of switch connections',
+      description: 'List of switch connections or Mermaid graph text',
     },
     500: {
       description: 'Internal server error',

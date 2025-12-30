@@ -6,6 +6,7 @@ export const networkEdgeSchema = z.object({
   sourcePort: z.string(),
   targetPort: z.string(),
   protocol: z.string(),
+  type: z.string().optional(),
 });
 
 export const getSwitchConnectionsResponseSchema = z.array(
@@ -14,15 +15,16 @@ export const getSwitchConnectionsResponseSchema = z.array(
       id: z.number(),
       name: z.string().nullable(),
       ip: z.string(),
+      type: z.string(),
       port: z.object({
         num: z.number(),
         name: z.string().nullable(),
-        descr: z.string().nullable(),
       }),
     }),
     target: z.object({
       id: z.number().nullable(),
       name: z.string().nullable(),
+      type: z.string(),
       port: z.object({
         id: z.string().nullable(),
         descr: z.string().nullable(),
