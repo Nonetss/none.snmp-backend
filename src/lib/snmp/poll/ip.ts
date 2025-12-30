@@ -94,8 +94,11 @@ export async function pollIpSnmp(deviceId?: number) {
   }
 
   const devices = await query;
+  console.log(`[IP Poll] Processing ${devices.length} devices...`);
 
-  for (const device of devices) {
+  const CONCURRENCY_LIMIT = 5;
+
+  const processDevice = async (device: (typeof devices)[0]) => {
     try {
       await db
         .insert(ipSnmpTable)
@@ -107,7 +110,7 @@ export async function pollIpSnmp(deviceId?: number) {
         .from(ipSnmpTable)
         .where(eq(ipSnmpTable.deviceId, device.id));
 
-      if (!ipSnmpRecord) continue;
+      if (!ipSnmpRecord) return;
 
       const promises = metrics.map(async (metric) => {
         try {
@@ -115,6 +118,7 @@ export async function pollIpSnmp(deviceId?: number) {
             device.ipv4,
             device.snmpAuth,
             metric.oidBase,
+            3000,
           );
           return { name: metric.name, result };
         } catch (error) {
@@ -209,10 +213,15 @@ export async function pollIpSnmp(deviceId?: number) {
           });
       }
 
-      console.log(`[IP Poll] ${device.ipv4}: Procesado correctamente.`);
+      console.log(`[IP Poll] ${device.ipv4}: Success`);
     } catch (error) {
-      console.error(`Error procesando IP SNMP de ${device.ipv4}:`, error);
+      console.error(`[IP Poll] Error ${device.ipv4}:`, error);
     }
+  };
+
+  for (let i = 0; i < devices.length; i += CONCURRENCY_LIMIT) {
+    const batch = devices.slice(i, i + CONCURRENCY_LIMIT);
+    await Promise.all(batch.map(processDevice));
   }
 
   console.timeEnd('pollIpSnmp');

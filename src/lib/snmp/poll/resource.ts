@@ -109,8 +109,11 @@ export async function pollResources(deviceId?: number) {
   }
 
   const devices = await query;
+  console.log(`[Resource Poll] Processing ${devices.length} devices...`);
 
-  for (const device of devices) {
+  const CONCURRENCY_LIMIT = 5;
+
+  const processDevice = async (device: (typeof devices)[0]) => {
     try {
       // 1. Asegurar registro padre en resourceTable
       await db
@@ -140,7 +143,7 @@ export async function pollResources(deviceId?: number) {
           ),
         );
 
-      if (!hrResource) continue;
+      if (!hrResource) return;
 
       // 2. Obtener datos SNMP
       const promises = metrics.map(async (metric) => {
@@ -149,6 +152,7 @@ export async function pollResources(deviceId?: number) {
             device.ipv4,
             device.snmpAuth,
             metric.oidBase,
+            3000,
           );
           return { name: metric.name, result };
         } catch (error) {
@@ -248,10 +252,15 @@ export async function pollResources(deviceId?: number) {
           });
       }
 
-      console.log(`[Resource Poll] ${device.ipv4}: Procesado correctamente.`);
+      console.log(`[Resource Poll] ${device.ipv4}: Success`);
     } catch (error) {
-      console.error(`Error procesando recursos de ${device.ipv4}:`, error);
+      console.error(`[Resource Poll] Error ${device.ipv4}:`, error);
     }
+  };
+
+  for (let i = 0; i < devices.length; i += CONCURRENCY_LIMIT) {
+    const batch = devices.slice(i, i + CONCURRENCY_LIMIT);
+    await Promise.all(batch.map(processDevice));
   }
 
   console.timeEnd('pollResources');
