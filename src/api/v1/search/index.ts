@@ -1,5 +1,5 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import connectionRouter from '@/api/v1/search/connection/get.index';
+import connectionRouter from '@/api/v1/search/connection/index';
 import deviceSearchRouter from '@/api/v1/search/device/get.index';
 import resourceSearchRouter from '@/api/v1/search/resource/get.index';
 import serviceSearchRouter from '@/api/v1/search/service/get.index';

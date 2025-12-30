@@ -5,7 +5,7 @@ export const getConnectionSearchRoute = createRoute({
   method: 'get',
   path: '/connection',
   summary: 'Search connection by IP or MAC',
-  tags: ['Search'],
+  tags: ['Search', 'Search Connection'],
   description:
     'Searches the ARP/Neighbor tables to find which device and port a specific IP or MAC is connected to.',
   request: {
