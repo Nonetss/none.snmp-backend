@@ -59,15 +59,20 @@ export async function pollSystem(deviceId?: number) {
   }
 
   const devices = await query;
+  console.log(`[System Poll] Processing ${devices.length} devices...`);
 
-  for (const device of devices) {
+  const CONCURRENCY_LIMIT = 10;
+
+  const processDevice = async (device: (typeof devices)[0]) => {
     try {
       const promises = metrics.map(async (metric) => {
         try {
+          // Timeout de 2s para polling recurrente
           const result = await walkSNMP(
             device.ipv4,
             device.snmpAuth,
             metric.oidBase,
+            2000,
           );
           return { name: metric.name, result };
         } catch (error) {
@@ -97,35 +102,42 @@ export async function pollSystem(deviceId?: number) {
         }
       }
 
-      if (Object.keys(systemData).length === 0) continue;
-
-      await db
-        .insert(deviceSystemTable)
-        .values({
-          deviceId: device.id,
-          sysDescr: systemData.sysDescr,
-          sysUpTime: systemData.sysUpTime,
-          sysContact: systemData.sysContact,
-          sysName: systemData.sysName,
-          sysLocation: systemData.sysLocation,
-          sysServices: systemData.sysServices,
-        })
-        .onConflictDoUpdate({
-          target: [deviceSystemTable.deviceId],
-          set: {
-            sysDescr: sql`EXCLUDED.sys_descr`,
-            sysUpTime: sql`EXCLUDED.sys_up_time`,
-            sysContact: sql`EXCLUDED.sys_contact`,
-            sysName: sql`EXCLUDED.sys_name`,
-            sysLocation: sql`EXCLUDED.sys_location`,
-            sysServices: sql`EXCLUDED.sys_services`,
-          },
-        });
-
-      console.log(`[System Poll] ${device.ipv4}: Datos actualizados.`);
+      if (Object.keys(systemData).length > 0) {
+        await db
+          .insert(deviceSystemTable)
+          .values({
+            deviceId: device.id,
+            sysDescr: systemData.sysDescr,
+            sysUpTime: systemData.sysUpTime,
+            sysContact: systemData.sysContact,
+            sysName: systemData.sysName,
+            sysLocation: systemData.sysLocation,
+            sysServices: systemData.sysServices,
+          })
+          .onConflictDoUpdate({
+            target: [deviceSystemTable.deviceId],
+            set: {
+              sysDescr: sql`EXCLUDED.sys_descr`,
+              sysUpTime: sql`EXCLUDED.sys_up_time`,
+              sysContact: sql`EXCLUDED.sys_contact`,
+              sysName: sql`EXCLUDED.sys_name`,
+              sysLocation: sql`EXCLUDED.sys_location`,
+              sysServices: sql`EXCLUDED.sys_services`,
+            },
+          });
+        console.log(`[System Poll] ${device.ipv4}: Success`);
+      } else {
+        console.log(`[System Poll] ${device.ipv4}: No data`);
+      }
     } catch (error) {
-      console.error(`Error procesando System info de ${device.ipv4}:`, error);
+      console.error(`[System Poll] Error ${device.ipv4}:`, error);
     }
+  };
+
+  // Procesar en lotes de concurrencia
+  for (let i = 0; i < devices.length; i += CONCURRENCY_LIMIT) {
+    const batch = devices.slice(i, i + CONCURRENCY_LIMIT);
+    await Promise.all(batch.map(processDevice));
   }
 
   console.timeEnd('pollSystem');

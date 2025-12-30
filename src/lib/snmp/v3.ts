@@ -14,6 +14,7 @@ export interface SNMPv3Config {
 export async function getSNMPv3(
   config: SNMPv3Config,
   oids: string[],
+  timeout: number = 5000,
 ): Promise<snmp.Varbind[]> {
   return new Promise((resolve, reject) => {
     const user: snmp.User = {
@@ -40,7 +41,7 @@ export async function getSNMPv3(
       port: config.port,
       version: snmp.Version3,
       retries: 1,
-      timeout: 5000,
+      timeout: timeout,
     };
 
     const session = snmp.createV3Session(config.ip, user, options);
@@ -61,6 +62,7 @@ export async function getSNMPv3(
 export async function walkSNMPv3(
   config: SNMPv3Config,
   rootOid: string,
+  timeout: number = 5000,
 ): Promise<snmp.Varbind[]> {
   return new Promise((resolve, reject) => {
     const user: snmp.User = {
@@ -87,34 +89,38 @@ export async function walkSNMPv3(
       port: config.port,
       version: snmp.Version3,
       retries: 1,
-      timeout: 5000,
+      timeout: timeout,
     };
 
     const session = snmp.createV3Session(config.ip, user, options);
     const result: snmp.Varbind[] = [];
 
-    session.walk(
-      rootOid,
-      (varbinds) => {
-        for (const vb of varbinds) {
-          if (snmp.isVarbindError(vb)) {
-            console.error(snmp.varbindError(vb));
-          } else {
-            // Ensure strict subtree matching (handling dot boundaries)
-            if (vb.oid === rootOid || vb.oid.startsWith(rootOid + '.')) {
-              result.push(vb);
-            }
-          }
-        }
-      },
-      (error) => {
+    function walk(currentOid: string) {
+      session.getNext([currentOid], (error, varbinds) => {
         if (error) {
           reject(error);
+          session.close();
+          return;
+        }
+
+        const vb = varbinds[0];
+        if (snmp.isVarbindError(vb)) {
+          resolve(result);
+          session.close();
+          return;
+        }
+
+        // Check if we are still in the subtree
+        if (vb.oid === rootOid || vb.oid.startsWith(rootOid + '.')) {
+          result.push(vb);
+          walk(vb.oid); // Next one
         } else {
           resolve(result);
+          session.close();
         }
-        session.close();
-      },
-    );
+      });
+    }
+
+    walk(rootOid);
   });
 }

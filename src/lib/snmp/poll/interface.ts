@@ -50,9 +50,11 @@ export async function pollInterfaces(deviceId?: number) {
   }
 
   const devices = await query;
+  console.log(`[Interface Poll] Processing ${devices.length} devices...`);
 
-  // Procesar cada dispositivo
-  for (const device of devices) {
+  const CONCURRENCY_LIMIT = 5; // Menor concurrencia porque interfaces pide muchos OIDs
+
+  const processDevice = async (device: (typeof devices)[0]) => {
     try {
       // Paralelizar las peticiones SNMP
       const promises = metrics.map(async (metric) => {
@@ -61,6 +63,7 @@ export async function pollInterfaces(deviceId?: number) {
             device.ipv4,
             device.snmpAuth,
             metric.oidBase,
+            3000,
           );
           return { name: metric.name, result };
         } catch (error) {
@@ -69,8 +72,7 @@ export async function pollInterfaces(deviceId?: number) {
       });
 
       const data = await Promise.all(promises);
-
-      // Agrupar por ifIndex
+      // ... resto de la lógica de agrupamiento ...
       const interfacesMap = new Map<number, Record<string, unknown>>();
 
       for (const { name, result } of data) {
@@ -105,7 +107,10 @@ export async function pollInterfaces(deviceId?: number) {
 
       const interfacesList = Array.from(interfacesMap.values());
 
-      if (interfacesList.length === 0) continue;
+      if (interfacesList.length === 0) {
+        console.log(`[Interface Poll] ${device.ipv4}: No interfaces found`);
+        return;
+      }
 
       // Paso 1: Upsert Interfaces Estáticas
       await db
@@ -162,9 +167,18 @@ export async function pollInterfaces(deviceId?: number) {
       if (telemetryData.length > 0) {
         await db.insert(interfaceDataTable).values(telemetryData);
       }
+      console.log(
+        `[Interface Poll] ${device.ipv4}: Success (${interfacesList.length} interfaces)`,
+      );
     } catch (error) {
-      console.error(`Error procesando dispositivo ${device.ipv4}:`, error);
+      console.error(`[Interface Poll] Error ${device.ipv4}:`, error);
     }
+  };
+
+  // Procesar en lotes
+  for (let i = 0; i < devices.length; i += CONCURRENCY_LIMIT) {
+    const batch = devices.slice(i, i + CONCURRENCY_LIMIT);
+    await Promise.all(batch.map(processDevice));
   }
 
   console.timeEnd('pollInterfaces');

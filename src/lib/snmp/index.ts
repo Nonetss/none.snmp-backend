@@ -11,7 +11,12 @@ export * from '@/lib/snmp/v3';
 
 type SNMPRecord = InferSelectModel<typeof snmpAuthTable>;
 
-export async function getSNMP(ip: string, config: SNMPRecord, oids: string[]) {
+export async function getSNMP(
+  ip: string,
+  config: SNMPRecord,
+  oids: string[],
+  timeout: number = 5000,
+) {
   switch (config.version) {
     case 'v1':
       return getSNMPv1(
@@ -21,6 +26,7 @@ export async function getSNMP(ip: string, config: SNMPRecord, oids: string[]) {
           community: config.community,
         },
         oids,
+        timeout,
       );
     case 'v2c':
       return getSNMPv2c(
@@ -30,6 +36,7 @@ export async function getSNMP(ip: string, config: SNMPRecord, oids: string[]) {
           community: config.community,
         },
         oids,
+        timeout,
       );
     case 'v3':
       return getSNMPv3(
@@ -44,6 +51,7 @@ export async function getSNMP(ip: string, config: SNMPRecord, oids: string[]) {
           privKey: config.v3PrivKey,
         },
         oids,
+        timeout,
       );
     default:
       throw new Error(`Unsupported SNMP version: ${config.version}`);
@@ -54,6 +62,7 @@ export async function walkSNMP(
   ip: string,
   config: SNMPRecord,
   rootOid: string,
+  timeout: number = 5000,
 ) {
   switch (config.version) {
     case 'v1':
@@ -64,6 +73,7 @@ export async function walkSNMP(
           community: config.community,
         },
         rootOid,
+        timeout,
       );
     case 'v2c':
       return walkSNMPv2c(
@@ -73,6 +83,7 @@ export async function walkSNMP(
           community: config.community,
         },
         rootOid,
+        timeout,
       );
     case 'v3':
       return walkSNMPv3(
@@ -87,6 +98,7 @@ export async function walkSNMP(
           privKey: config.v3PrivKey,
         },
         rootOid,
+        timeout,
       );
     default:
       throw new Error(`Unsupported SNMP version: ${config.version}`);
