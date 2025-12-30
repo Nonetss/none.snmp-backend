@@ -30,6 +30,7 @@ import {
 } from '@/db/models/device/bridge.table';
 import { cdpNeighborTable } from '@/db/models/device/cdp.table';
 import { lldpNeighborTable } from '@/db/models/device/lldp.table';
+import { entityPhysicalTable } from '@/db/models/device/entity.table';
 
 export {
   deviceTable,
@@ -63,4 +64,6 @@ export {
   cdpNeighborTable,
   // LLDP
   lldpNeighborTable,
+  // Entity
+  entityPhysicalTable,
 };
