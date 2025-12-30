@@ -140,7 +140,7 @@ export const getSwitchConnectionsHandler: RouteHandler<
         lines.push(`    ${srcId} -- "${srcPort} <-> ${tgtPort}" --- ${tgtId}`);
       });
 
-      return c.json({ graph: lines.join('\n') }, 200);
+      return c.text(lines.join('\n'), 200);
     }
 
     return c.json(connections, 200);
