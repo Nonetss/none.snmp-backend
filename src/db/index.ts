@@ -25,6 +25,8 @@ import {
   bridgeBaseTable,
   bridgePortTable,
   bridgeFdbTable,
+  vlanTable,
+  bridgeFdbQTable,
 } from '@/db/models/device/bridge.table';
 import { cdpNeighborTable } from '@/db/models/device/cdp.table';
 import { lldpNeighborTable } from '@/db/models/device/lldp.table';
@@ -55,6 +57,8 @@ export {
   bridgeBaseTable,
   bridgePortTable,
   bridgeFdbTable,
+  vlanTable,
+  bridgeFdbQTable,
   // CDP
   cdpNeighborTable,
   // LLDP

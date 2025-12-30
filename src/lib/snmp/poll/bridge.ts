@@ -6,9 +6,11 @@ import {
   bridgeBaseTable,
   bridgePortTable,
   bridgeFdbTable,
+  vlanTable,
+  bridgeFdbQTable,
 } from '@/db';
-import { inArray, eq } from 'drizzle-orm';
-import { walkSNMP, getSNMP } from '@/lib/snmp';
+import { inArray, eq, sql } from 'drizzle-orm';
+import { walkSNMP, getSNMP, sanitizeString } from '@/lib/snmp';
 
 const BASE_METRICS = [
   'dot1dBaseBridgeAddress',
@@ -16,13 +18,25 @@ const BASE_METRICS = [
   'dot1dBaseType',
 ] as const;
 
-const PORT_METRICS = ['dot1dBasePort', 'dot1dBasePortIfIndex'] as const;
+const PORT_METRICS = [
+  'dot1dBasePort',
+  'dot1dBasePortIfIndex',
+  'dot1qPvid',
+] as const;
+
+const VLAN_METRICS = [
+  'dot1qVlanStaticName',
+  'dot1qVlanStaticEgressPorts',
+  'dot1qVlanStaticUntaggedPorts',
+] as const;
 
 const FDB_METRICS = [
   'dot1dTpFdbAddress',
   'dot1dTpFdbPort',
   'dot1dTpFdbStatus',
 ] as const;
+
+const FDB_Q_METRICS = ['dot1qTpFdbPort', 'dot1qTpFdbStatus'] as const;
 
 export async function pollBridge(deviceId?: number) {
   console.time('pollBridge');
@@ -31,8 +45,11 @@ export async function pollBridge(deviceId?: number) {
   const allMetricNames = [
     ...BASE_METRICS,
     ...PORT_METRICS,
+    ...VLAN_METRICS,
     ...FDB_METRICS,
+    ...FDB_Q_METRICS,
   ] as string[];
+
   const metrics = await db
     .select()
     .from(metricObjectsTable)
@@ -84,7 +101,7 @@ export async function pollBridge(deviceId?: number) {
                   .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
                   .join(':');
               } else {
-                val = val.toString('utf-8');
+                val = sanitizeString(val);
               }
             }
             baseData[name] = val;
@@ -108,29 +125,29 @@ export async function pollBridge(deviceId?: number) {
               },
             });
         } catch (e) {
-          // Si falla base info, quizás no es un switch o no soporta Bridge MIB
+          // No bridge support
         }
       }
 
-      // --- B. Port Table (Logic to Physical Mapping) ---
+      // --- B. Port Table (Mapping & PVID) ---
       const portMetrics = PORT_METRICS.map((name) =>
         metricsMap.get(name),
       ).filter(Boolean) as any[];
       if (portMetrics.length > 0) {
-        const portPromises = portMetrics.map((m) =>
-          walkSNMP(device.ipv4, device.snmpAuth, m.oidBase, 3000),
+        const portResults = await Promise.all(
+          portMetrics.map((m) =>
+            walkSNMP(device.ipv4, device.snmpAuth, m.oidBase, 3000),
+          ),
         );
-        const portResults = await Promise.all(portPromises);
 
         const portsMap = new Map<number, any>();
         portResults.forEach((res, i) => {
           const name = portMetrics[i].name;
           res.forEach((vb) => {
             const parts = vb.oid.split('.');
-            const bridgePortIdx = parseInt(parts[parts.length - 1], 10);
-            if (!portsMap.has(bridgePortIdx))
-              portsMap.set(bridgePortIdx, { bridgePort: bridgePortIdx });
-            portsMap.get(bridgePortIdx)[name] = vb.value;
+            const idx = parseInt(parts[parts.length - 1], 10);
+            if (!portsMap.has(idx)) portsMap.set(idx, { bridgePort: idx });
+            portsMap.get(idx)[name] = vb.value;
           });
         });
 
@@ -142,37 +159,95 @@ export async function pollBridge(deviceId?: number) {
               portEntries.map((p) => ({
                 deviceId: device.id,
                 bridgePort: p.bridgePort,
-                ifIndex: Number(p.dot1dBasePortIfIndex),
+                ifIndex: p.dot1dBasePortIfIndex
+                  ? Number(p.dot1dBasePortIfIndex)
+                  : null,
+                pvid: p.dot1qPvid ? Number(p.dot1qPvid) : null,
               })),
             )
             .onConflictDoUpdate({
               target: [bridgePortTable.deviceId, bridgePortTable.bridgePort],
               set: {
                 ifIndex: sql`EXCLUDED.if_index`,
+                pvid: sql`EXCLUDED.pvid`,
                 updatedAt: new Date(),
               },
             });
         }
       }
 
-      // --- C. FDB Table (MAC Addresses) ---
+      // --- C. VLAN Table (Inventory) ---
+      const vlanMetrics = VLAN_METRICS.map((name) =>
+        metricsMap.get(name),
+      ).filter(Boolean) as any[];
+      if (vlanMetrics.length > 0) {
+        const vlanResults = await Promise.all(
+          vlanMetrics.map((m) =>
+            walkSNMP(device.ipv4, device.snmpAuth, m.oidBase, 3000),
+          ),
+        );
+
+        const vlansMap = new Map<number, any>();
+        vlanResults.forEach((res, i) => {
+          const name = vlanMetrics[i].name;
+          res.forEach((vb) => {
+            const parts = vb.oid.split('.');
+            const vlanId = parseInt(parts[parts.length - 1], 10);
+            if (!vlansMap.has(vlanId)) vlansMap.set(vlanId, { vlanId });
+
+            let val = vb.value;
+            if (Buffer.isBuffer(val)) {
+              if (name.includes('Ports')) {
+                val = val.toString('hex').toUpperCase();
+              } else {
+                val = sanitizeString(val);
+              }
+            }
+            vlansMap.get(vlanId)[name] = val;
+          });
+        });
+
+        const vlanEntries = Array.from(vlansMap.values());
+        if (vlanEntries.length > 0) {
+          await db
+            .insert(vlanTable)
+            .values(
+              vlanEntries.map((v) => ({
+                deviceId: device.id,
+                vlanId: v.vlanId,
+                name: v.dot1qVlanStaticName,
+                egressPorts: v.dot1qVlanStaticEgressPorts,
+                untaggedPorts: v.dot1qVlanStaticUntaggedPorts,
+              })),
+            )
+            .onConflictDoUpdate({
+              target: [vlanTable.deviceId, vlanTable.vlanId],
+              set: {
+                name: sql`EXCLUDED.name`,
+                egressPorts: sql`EXCLUDED.egress_ports`,
+                untaggedPorts: sql`EXCLUDED.untagged_ports`,
+                updatedAt: new Date(),
+              },
+            });
+        }
+      }
+
+      // --- D. FDB Table (MAC Addresses - Transparent) ---
       const fdbMetrics = FDB_METRICS.map((name) => metricsMap.get(name)).filter(
         Boolean,
       ) as any[];
       if (fdbMetrics.length > 0) {
-        // Solo necesitamos dot1dTpFdbPort y dot1dTpFdbStatus para mapear MACs.
-        // La MAC está codificada en el OID.
-        const fdbPromises = fdbMetrics.map((m) =>
-          walkSNMP(device.ipv4, device.snmpAuth, m.oidBase, 3000),
+        const fdbResults = await Promise.all(
+          fdbMetrics.map((m) =>
+            walkSNMP(device.ipv4, device.snmpAuth, m.oidBase, 3000),
+          ),
         );
-        const fdbResults = await Promise.all(fdbPromises);
 
         const fdbMap = new Map<string, any>();
         fdbResults.forEach((res, i) => {
           const name = fdbMetrics[i].name;
           res.forEach((vb) => {
             const parts = vb.oid.split('.');
-            // Los últimos 6 segmentos son la MAC en decimal
             const macParts = parts.slice(-6);
             if (macParts.length !== 6) return;
             const mac = macParts
@@ -208,14 +283,76 @@ export async function pollBridge(deviceId?: number) {
             });
         }
       }
+
+      // --- E. FDB Q Table (MAC Addresses - VLAN Aware) ---
+      const fdbQMetrics = FDB_Q_METRICS.map((name) =>
+        metricsMap.get(name),
+      ).filter(Boolean) as any[];
+      if (fdbQMetrics.length > 0) {
+        const fdbQResults = await Promise.all(
+          fdbQMetrics.map((m) =>
+            walkSNMP(device.ipv4, device.snmpAuth, m.oidBase, 3000),
+          ),
+        );
+
+        const fdbQMap = new Map<string, any>();
+        fdbQResults.forEach((res, i) => {
+          const name = fdbQMetrics[i].name;
+          const metricDef = fdbQMetrics[i];
+          const baseLen = metricDef.oidBase.split('.').length;
+
+          res.forEach((vb) => {
+            const parts = vb.oid.split('.');
+            const indexParts = parts.slice(baseLen);
+            if (indexParts.length < 7) return;
+
+            const vlanId = parseInt(indexParts[0], 10);
+            const mac = indexParts
+              .slice(1, 7)
+              .map((p) =>
+                parseInt(p, 10).toString(16).padStart(2, '0').toUpperCase(),
+              )
+              .join(':');
+
+            const key = `${vlanId}_${mac}`;
+            if (!fdbQMap.has(key)) fdbQMap.set(key, { vlanId, address: mac });
+            fdbQMap.get(key)[name] = vb.value;
+          });
+        });
+
+        const fdbQEntries = Array.from(fdbQMap.values());
+        if (fdbQEntries.length > 0) {
+          await db
+            .insert(bridgeFdbQTable)
+            .values(
+              fdbQEntries.map((f) => ({
+                deviceId: device.id,
+                vlanId: f.vlanId,
+                address: f.address,
+                port: Number(f.dot1qTpFdbPort),
+                status: Number(f.dot1qTpFdbStatus),
+              })),
+            )
+            .onConflictDoUpdate({
+              target: [
+                bridgeFdbQTable.deviceId,
+                bridgeFdbQTable.vlanId,
+                bridgeFdbQTable.address,
+              ],
+              set: {
+                port: sql`EXCLUDED.port`,
+                status: sql`EXCLUDED.status`,
+                updatedAt: new Date(),
+              },
+            });
+        }
+      }
+
       console.log(`[Bridge Poll] ${device.ipv4}: Success`);
     } catch (error) {
       console.error(`[Bridge Poll] Error ${device.ipv4}:`, error);
     }
   };
-
-  // Import sql for onConflictDoUpdate
-  const { sql } = await import('drizzle-orm');
 
   for (let i = 0; i < devices.length; i += CONCURRENCY_LIMIT) {
     const batch = devices.slice(i, i + CONCURRENCY_LIMIT);
