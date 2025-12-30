@@ -1,4 +1,3 @@
-import { db } from '@/core/config';
 import {
   bridgeFdbTable,
   bridgePortTable,
@@ -6,10 +5,13 @@ import {
   interfaceTable,
   ipNetToMediaTable,
   systemTable,
+  lldpNeighborTable,
+  cdpNeighborTable,
 } from '@/db';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, and, inArray, sql, or } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getConnectionSearchRoute } from './get.route';
+import { db } from '@/core/config';
 
 // --- HELPERS DE TRADUCCIÓN ---
 
@@ -61,6 +63,39 @@ export const getConnectionSearchHandler: RouteHandler<
     }
 
     // 1. Encontrar en qué switches/puertos está la MAC
+    // --- A. Búsqueda en LLDP (Máxima confianza) ---
+    const lldpMatches = await db
+      .select({
+        switchId: deviceTable.id,
+        switchName: systemTable.sysName,
+        switchIp: deviceTable.ipv4,
+        switchLocation: systemTable.sysLocation,
+        ifIndex: lldpNeighborTable.localPortNum,
+        macAddress: lldpNeighborTable.chassisId,
+        lastSeen: lldpNeighborTable.updatedAt,
+      })
+      .from(lldpNeighborTable)
+      .innerJoin(deviceTable, eq(lldpNeighborTable.deviceId, deviceTable.id))
+      .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
+      .where(inArray(lldpNeighborTable.chassisId, targetMacs));
+
+    // --- B. Búsqueda en CDP ---
+    const cdpMatches = await db
+      .select({
+        switchId: deviceTable.id,
+        switchName: systemTable.sysName,
+        switchIp: deviceTable.ipv4,
+        switchLocation: systemTable.sysLocation,
+        ifIndex: cdpNeighborTable.ifIndex,
+        macAddress: cdpNeighborTable.neighborDeviceId,
+        lastSeen: cdpNeighborTable.updatedAt,
+      })
+      .from(cdpNeighborTable)
+      .innerJoin(deviceTable, eq(cdpNeighborTable.deviceId, deviceTable.id))
+      .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
+      .where(inArray(cdpNeighborTable.neighborDeviceId, targetMacs));
+
+    // --- C. Búsqueda en FDB (Tradicional) ---
     const fdbEntries = await db
       .select({
         switchId: deviceTable.id,
@@ -68,10 +103,7 @@ export const getConnectionSearchHandler: RouteHandler<
         switchIp: deviceTable.ipv4,
         switchLocation: systemTable.sysLocation,
         bridgePort: bridgeFdbTable.port,
-        ifName: interfaceTable.ifName,
-        ifDescr: interfaceTable.ifDescr,
-        ifSpeed: interfaceTable.ifSpeed,
-        ifType: interfaceTable.ifType,
+        ifIndex: bridgePortTable.ifIndex,
         macAddress: bridgeFdbTable.address,
         lastSeen: bridgeFdbTable.updatedAt,
       })
@@ -85,33 +117,68 @@ export const getConnectionSearchHandler: RouteHandler<
           eq(bridgePortTable.bridgePort, bridgeFdbTable.port),
         ),
       )
-      .leftJoin(
-        interfaceTable,
-        and(
-          eq(interfaceTable.deviceId, bridgeFdbTable.deviceId),
-          eq(interfaceTable.ifIndex, bridgePortTable.ifIndex),
-        ),
-      )
       .where(inArray(bridgeFdbTable.address, targetMacs));
 
-    if (fdbEntries.length === 0) return c.json([], 200);
+    // 2. Consolidar resultados (LLDP/CDP tienen prioridad de confianza)
+    const allMatches = [
+      ...lldpMatches.map((m) => ({
+        ...m,
+        bridgePort: null,
+        confidence: 'high',
+        resolvedBy: 'LLDP' as const,
+      })),
+      ...cdpMatches.map((m) => ({
+        ...m,
+        bridgePort: null,
+        confidence: 'high',
+        resolvedBy: 'CDP' as const,
+      })),
+      ...fdbEntries.map((m) => ({
+        ...m,
+        confidence: 'low',
+        resolvedBy: 'FDB' as const,
+      })),
+    ];
 
-    // 2. Para cada puerto encontrado, contar cuántas MACs totales tiene
+    if (allMatches.length === 0) return c.json([], 200);
+
+    // 3. Enriquecer con información de interfaces y conteo de MACs
     const resultsWithCount = await Promise.all(
-      fdbEntries.map(async (entry) => {
-        const [{ count }] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(bridgeFdbTable)
+      allMatches.map(async (entry) => {
+        let portMacCount = 1;
+
+        // Si es FDB, contamos cuántas MACs hay en ese puerto para ver si es Uplink
+        if (entry.confidence === 'low' && entry.bridgePort !== null) {
+          const [{ count }] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(bridgeFdbTable)
+            .where(
+              and(
+                eq(bridgeFdbTable.deviceId, entry.switchId),
+                eq(bridgeFdbTable.port, entry.bridgePort),
+              ),
+            );
+          portMacCount = Number(count);
+        }
+
+        // Obtener detalles de la interfaz
+        const [iface] = await db
+          .select()
+          .from(interfaceTable)
           .where(
             and(
-              eq(bridgeFdbTable.deviceId, entry.switchId),
-              eq(bridgeFdbTable.port, entry.bridgePort),
+              eq(interfaceTable.deviceId, entry.switchId),
+              eq(interfaceTable.ifIndex, entry.ifIndex!),
             ),
           );
 
         return {
           ...entry,
-          portMacCount: Number(count),
+          portMacCount,
+          ifName: iface?.ifName,
+          ifDescr: iface?.ifDescr,
+          ifSpeed: iface?.ifSpeed,
+          ifType: iface?.ifType,
         };
       }),
     );
@@ -126,6 +193,7 @@ export const getConnectionSearchHandler: RouteHandler<
         switchIp: r.switchIp,
         switchLocation: r.switchLocation,
         bridgePort: r.bridgePort,
+        resolvedBy: r.resolvedBy,
         portMacCount: r.portMacCount,
         isMostLikely: r.portMacCount === minMacs,
         interface:
@@ -142,7 +210,7 @@ export const getConnectionSearchHandler: RouteHandler<
               }
             : null,
         macAddress: r.macAddress,
-        ipAddress: ipMap.get(r.macAddress) || null,
+        ipAddress: ipMap.get(r.macAddress!) || null,
         lastSeen: r.lastSeen
           ? r.lastSeen.toISOString()
           : new Date().toISOString(),

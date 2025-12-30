@@ -12,7 +12,8 @@ export const connectionResultSchema = z.object({
   switchName: z.string().nullable(),
   switchIp: z.string(),
   switchLocation: z.string().nullable(),
-  bridgePort: z.number(),
+  bridgePort: z.number().nullable(),
+  resolvedBy: z.enum(['LLDP', 'CDP', 'FDB']),
   portMacCount: z.number().openapi({
     description:
       'Total number of MAC addresses learned on this port. Low numbers (1-2) usually indicate an access port.',
