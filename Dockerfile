@@ -35,7 +35,7 @@ COPY --from=prerelease /app/package.json .
 RUN apt-get update && apt-get install -y \
     git \
     curl \
-    ping \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # Run the app

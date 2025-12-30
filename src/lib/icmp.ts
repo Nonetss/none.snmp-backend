@@ -12,10 +12,17 @@ export async function pingHost(ip: string, timeout = 2): Promise<PingResult> {
     IPV4: true,
   };
 
-  const res: pingResponse = await ping(ip, options);
+  try {
+    const res: pingResponse = await ping(ip, options);
 
-  return {
-    alive: res.alive ?? false,
-    time: res.time ?? 'unknown',
-  };
+    return {
+      alive: res.alive ?? false,
+      time: res.time ?? 'unknown',
+    };
+  } catch (error) {
+    return {
+      alive: false,
+      time: 'unknown',
+    };
+  }
 }
