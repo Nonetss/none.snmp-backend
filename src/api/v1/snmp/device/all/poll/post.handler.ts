@@ -5,6 +5,7 @@ import { pollResources } from '@/lib/snmp/poll/resource';
 import { pollIpSnmp } from '@/lib/snmp/poll/ip';
 import { pollSystem } from '@/lib/snmp/poll/system';
 import { pollBridge } from '@/lib/snmp/poll/bridge';
+import { pollCdp } from '@/lib/snmp/poll/cdp';
 
 export const postPollAllHandler: RouteHandler<typeof postPollAllRoute> = async (
   c,
@@ -12,6 +13,7 @@ export const postPollAllHandler: RouteHandler<typeof postPollAllRoute> = async (
   await pollSystem();
   await pollInterfaces();
   await pollBridge();
+  await pollCdp();
   await pollResources();
   await pollIpSnmp();
   return c.json({ message: 'Success' }, 200);
@@ -25,6 +27,7 @@ export const postPollSingleAllHandler: RouteHandler<
   await pollSystem(deviceId);
   await pollInterfaces(deviceId);
   await pollBridge(deviceId);
+  await pollCdp(deviceId);
   await pollResources(deviceId);
   await pollIpSnmp(deviceId);
   return c.json({ message: 'Success' }, 200);
