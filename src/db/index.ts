@@ -5,7 +5,6 @@ import {
   metricsDefinitionTable,
   metricObjectsTable,
 } from '@/db/models/metricsDefinition.table';
-import { deviceMetricInstancesTable } from '@/db/models/device/deviceMetricInstances.table';
 import {
   interfaceTable,
   interfaceDataTable,
@@ -22,6 +21,11 @@ import {
   ipNetToMediaTable,
 } from '@/db/models/device/ipSnmp.table';
 import { systemTable } from '@/db/models/device/system.table';
+import {
+  bridgeBaseTable,
+  bridgePortTable,
+  bridgeFdbTable,
+} from '@/db/models/device/bridge.table';
 
 export {
   deviceTable,
@@ -31,7 +35,6 @@ export {
   // Metrics
   metricsDefinitionTable,
   metricObjectsTable,
-  deviceMetricInstancesTable,
   // Interfaces
   interfaceTable,
   interfaceDataTable,
@@ -46,4 +49,8 @@ export {
   ipNetToMediaTable,
   // System
   systemTable,
+  // Bridge
+  bridgeBaseTable,
+  bridgePortTable,
+  bridgeFdbTable,
 };

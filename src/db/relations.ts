@@ -15,10 +15,6 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.id,
       to: r.interfaceTable.deviceId,
     }),
-    metricInstances: r.many.deviceMetricInstancesTable({
-      from: r.deviceTable.id,
-      to: r.deviceMetricInstancesTable.deviceId,
-    }),
     resources: r.many.resourceTable({
       from: r.deviceTable.id,
       to: r.resourceTable.deviceId,
@@ -26,6 +22,18 @@ export const relations = defineRelations(schema, (r) => ({
     system: r.one.systemTable({
       from: r.deviceTable.id,
       to: r.systemTable.deviceId,
+    }),
+    bridgeBase: r.one.bridgeBaseTable({
+      from: r.deviceTable.id,
+      to: r.bridgeBaseTable.deviceId,
+    }),
+    bridgePorts: r.many.bridgePortTable({
+      from: r.deviceTable.id,
+      to: r.bridgePortTable.deviceId,
+    }),
+    bridgeFdb: r.many.bridgeFdbTable({
+      from: r.deviceTable.id,
+      to: r.bridgeFdbTable.deviceId,
     }),
   },
   subnetTable: {
@@ -50,20 +58,6 @@ export const relations = defineRelations(schema, (r) => ({
     definition: r.one.metricsDefinitionTable({
       from: r.metricObjectsTable.metricsDefinitionId,
       to: r.metricsDefinitionTable.id,
-    }),
-    instances: r.many.deviceMetricInstancesTable({
-      from: r.metricObjectsTable.id,
-      to: r.deviceMetricInstancesTable.metricObjectId,
-    }),
-  },
-  deviceMetricInstancesTable: {
-    device: r.one.deviceTable({
-      from: r.deviceMetricInstancesTable.deviceId,
-      to: r.deviceTable.id,
-    }),
-    metricObject: r.one.metricObjectsTable({
-      from: r.deviceMetricInstancesTable.metricObjectId,
-      to: r.metricObjectsTable.id,
     }),
   },
   interfaceTable: {
@@ -121,6 +115,24 @@ export const relations = defineRelations(schema, (r) => ({
   systemTable: {
     device: r.one.deviceTable({
       from: r.systemTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+  },
+  bridgeBaseTable: {
+    device: r.one.deviceTable({
+      from: r.bridgeBaseTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+  },
+  bridgePortTable: {
+    device: r.one.deviceTable({
+      from: r.bridgePortTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+  },
+  bridgeFdbTable: {
+    device: r.one.deviceTable({
+      from: r.bridgeFdbTable.deviceId,
       to: r.deviceTable.id,
     }),
   },
