@@ -4,11 +4,13 @@ WORKDIR /app
 # Install dependencies into temp directory
 # this will cache them and speed up future builds
 FROM base AS install
-mkdir -p /temp/dev
+RUN mkdir -p /temp/dev
 COPY package.json bun.lock /temp/dev/
 RUN cd /temp/dev && bun install --frozen-lockfile
 
-mkdir -p /temp/prod
+# Install dependencies into temp directory
+# this will cache them and speed up future builds
+RUN mkdir -p /temp/prod
 COPY package.json bun.lock /temp/prod/
 RUN cd /temp/prod && bun install --frozen-lockfile --production
 
@@ -27,6 +29,7 @@ ENV NODE_ENV=production
 FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /app/src src
+COPY --from=prerelease /app/tsconfig.json .
 COPY --from=prerelease /app/package.json .
 
 # Run the app

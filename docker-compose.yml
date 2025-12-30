@@ -1,12 +1,12 @@
 services:
   app:
-    container_name: hono-template
+    container_name: snmp-backend
     build:
       context: .
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - NODE_ENV=production
