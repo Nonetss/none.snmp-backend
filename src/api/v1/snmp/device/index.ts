@@ -18,6 +18,7 @@ import getDeviceIpRouter from '@/api/v1/snmp/device/ip/get/get.index';
 // System
 import pollSystemRouter from '@/api/v1/snmp/device/system/poll/post.index';
 import getDeviceSystemRouter from '@/api/v1/snmp/device/system/get/get.index';
+import getDeviceByOsRouter from '@/api/v1/search/device/os/get/get.index';
 
 // Bridge
 import pollBridgeRouter from '@/api/v1/snmp/device/bridge/poll/post.index';
@@ -55,6 +56,7 @@ deviceRouter.route('/', getDeviceServicesRouter);
 deviceRouter.route('/', getDeviceInterfacesRouter);
 deviceRouter.route('/', getDeviceIpRouter);
 deviceRouter.route('/', getDeviceSystemRouter);
+deviceRouter.route('/', getDeviceByOsRouter);
 deviceRouter.route('/', getDeviceBridgeRouter);
 deviceRouter.route('/', getDeviceCdpRouter);
 deviceRouter.route('/', getDeviceLldpRouter);
