@@ -4,6 +4,7 @@ import {
   integer,
   timestamp,
   uniqueIndex,
+  text,
 } from 'drizzle-orm/pg-core';
 import { deviceTable } from '@/db/models/device/device.table';
 
@@ -79,8 +80,8 @@ export const vlanTable = pgTable(
       .references(() => deviceTable.id),
     vlanId: integer('vlan_id').notNull(), // dot1qVlanIndex
     name: varchar('name', { length: 255 }), // dot1qVlanStaticName
-    egressPorts: varchar('egress_ports', { length: 1024 }), // dot1qVlanStaticEgressPorts (BitMap Hex)
-    untaggedPorts: varchar('untagged_ports', { length: 1024 }), // dot1qVlanStaticUntaggedPorts
+    egressPorts: text('egress_ports'), // dot1qVlanStaticEgressPorts (BitMap Hex)
+    untaggedPorts: text('untagged_ports'), // dot1qVlanStaticUntaggedPorts
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (t) => [uniqueIndex('vlan_device_vlan_idx').on(t.deviceId, t.vlanId)],
