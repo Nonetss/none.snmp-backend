@@ -31,6 +31,7 @@ import {
 import { cdpNeighborTable } from '@/db/models/device/cdp.table';
 import { lldpNeighborTable } from '@/db/models/device/lldp.table';
 import { entityPhysicalTable } from '@/db/models/device/entity.table';
+import { routeTable } from '@/db/models/device/route.table';
 
 export {
   deviceTable,
@@ -52,6 +53,8 @@ export {
   ipSnmpTable,
   ipAddrEntryTable,
   ipNetToMediaTable,
+  // Routing
+  routeTable,
   // System
   systemTable,
   // Bridge

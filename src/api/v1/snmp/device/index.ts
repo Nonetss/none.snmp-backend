@@ -35,6 +35,10 @@ import getDeviceLldpRouter from '@/api/v1/snmp/device/lldp/get/get.index';
 import pollEntityRouter from '@/api/v1/snmp/device/entity/poll/post.index';
 import getDeviceEntityRouter from '@/api/v1/snmp/device/entity/get/get.index';
 
+// Routing
+import pollRouteRouter from '@/api/v1/snmp/device/route/poll/post.index';
+import getDeviceRouteRouter from '@/api/v1/snmp/device/route/get/get.index';
+
 // All
 import pollAllRouter from '@/api/v1/snmp/device/all/poll/post.index';
 import getDeviceAllRouter from '@/api/v1/snmp/device/all/get/get.index';
@@ -55,6 +59,7 @@ deviceRouter.route('/', getDeviceBridgeRouter);
 deviceRouter.route('/', getDeviceCdpRouter);
 deviceRouter.route('/', getDeviceLldpRouter);
 deviceRouter.route('/', getDeviceEntityRouter);
+deviceRouter.route('/', getDeviceRouteRouter);
 deviceRouter.route('/', getDeviceAllRouter);
 
 // Polling routes (POST)
@@ -66,6 +71,7 @@ deviceRouter.route('/poll', pollBridgeRouter);
 deviceRouter.route('/poll', pollCdpRouter);
 deviceRouter.route('/poll', pollLldpRouter);
 deviceRouter.route('/poll', pollEntityRouter);
+deviceRouter.route('/poll', pollRouteRouter);
 deviceRouter.route('/poll', pollAllRouter);
 
 export default deviceRouter;
