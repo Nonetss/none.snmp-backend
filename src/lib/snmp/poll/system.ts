@@ -134,11 +134,8 @@ export async function pollSystem(deviceId?: number) {
     }
   };
 
-  // Procesar en lotes de concurrencia
-  for (let i = 0; i < devices.length; i += CONCURRENCY_LIMIT) {
-    const batch = devices.slice(i, i + CONCURRENCY_LIMIT);
-    await Promise.all(batch.map(processDevice));
-  }
+  // Procesar todos los dispositivos en paralelo
+  await Promise.all(devices.map(processDevice));
 
   console.timeEnd('pollSystem');
 }

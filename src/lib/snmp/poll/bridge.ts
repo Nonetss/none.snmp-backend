@@ -382,10 +382,8 @@ export async function pollBridge(deviceId?: number) {
     }
   };
 
-  for (let i = 0; i < devices.length; i += CONCURRENCY_LIMIT) {
-    const batch = devices.slice(i, i + CONCURRENCY_LIMIT);
-    await Promise.all(batch.map(processDevice));
-  }
+  // Procesar todos los dispositivos en paralelo
+  await Promise.all(devices.map(processDevice));
 
   console.timeEnd('pollBridge');
 }
