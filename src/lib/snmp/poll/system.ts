@@ -125,6 +125,15 @@ export async function pollSystem(deviceId?: number) {
               sysServices: sql`EXCLUDED.sys_services`,
             },
           });
+
+        // Actualizar el nombre del dispositivo en la tabla principal
+        if (systemData.sysName) {
+          await db
+            .update(deviceTable)
+            .set({ name: systemData.sysName })
+            .where(eq(deviceTable.id, device.id));
+        }
+
         console.log(`[System Poll] ${device.ipv4}: Success`);
       } else {
         console.log(`[System Poll] ${device.ipv4}: No data`);
