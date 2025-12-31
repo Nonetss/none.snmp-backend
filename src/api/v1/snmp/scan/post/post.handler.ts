@@ -1,10 +1,11 @@
 import { db } from '@/core/config';
 import { snmpAuthTable, deviceTable, subnetTable } from '@/db';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postScanRoute } from './post.route';
 import { pingHost } from '@/lib/icmp';
-import { walkSNMP, getSNMP } from '@/lib/snmp';
+import { getSNMP } from '@/lib/snmp';
+import { pollAll } from '@/lib/snmp/poll/all';
 import * as ipaddr from 'ipaddr.js';
 
 function getAllIps(cidr: string): string[] {
@@ -84,13 +85,33 @@ export const postScanHandler: RouteHandler<typeof postScanRoute> = async (
       }
 
       if (successfulAuthId) {
-        await db.execute(sql`
-          INSERT INTO ${deviceTable} (ipv4, subnet_id, snmp_auth_id)
-          VALUES (${ip}, ${subnet.id}, ${successfulAuthId})
-          ON CONFLICT (ipv4) DO UPDATE
-          SET snmp_auth_id = ${successfulAuthId}, subnet_id = ${subnet.id}
-        `);
-        return { ip, status: 'success', authId: successfulAuthId };
+        const [device] = await db
+          .insert(deviceTable)
+          .values({
+            ipv4: ip,
+            subnetId: subnet.id,
+            snmpAuthId: successfulAuthId,
+          })
+          .onConflictDoUpdate({
+            target: [deviceTable.ipv4],
+            set: {
+              snmpAuthId: successfulAuthId,
+              subnetId: subnet.id,
+            },
+          })
+          .returning({ id: deviceTable.id });
+
+        if (device) {
+          // Trigger full poll for the discovered device
+          await pollAll(device.id);
+        }
+
+        return {
+          ip,
+          status: 'success',
+          authId: successfulAuthId,
+          deviceId: device?.id,
+        };
       }
 
       return { ip, status: 'failed' };
