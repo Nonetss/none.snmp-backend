@@ -44,10 +44,15 @@ export const getConnectionSearchHandler: RouteHandler<
   const { query } = c.req.valid('query');
 
   try {
+    // Normalizar la query si es una MAC (Quitar separadores y pasar a Upper)
+    const cleanMac = query.replace(/[:.-]/g, '').toUpperCase();
     let targetMacs: string[] = [query.toUpperCase()];
-    const ipMap = new Map<string, string>();
 
-    // 0. Lógica de búsqueda por IP si aplica
+    // Si parece una MAC de 12 chars, generar versión formateada para la búsqueda
+    if (/^[0-9A-F]{12}$/.test(cleanMac)) {
+      const formatted = cleanMac.match(/.{1,2}/g)?.join(':');
+      if (formatted) targetMacs = [formatted];
+    }
     if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(query)) {
       const arpEntries = await db
         .select()
