@@ -43,6 +43,18 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.id,
       to: r.lldpNeighborTable.deviceId,
     }),
+    routes: r.many.routeTable({
+      from: r.deviceTable.id,
+      to: r.routeTable.deviceId,
+    }),
+    physicalEntities: r.many.entityPhysicalTable({
+      from: r.deviceTable.id,
+      to: r.entityPhysicalTable.deviceId,
+    }),
+    ipSnmp: r.one.ipSnmpTable({
+      from: r.deviceTable.id,
+      to: r.ipSnmpTable.deviceId,
+    }),
   },
   subnetTable: {
     devices: r.many.deviceTable({
@@ -178,6 +190,44 @@ export const relations = defineRelations(schema, (r) => ({
     remoteInterface: r.one.interfaceTable({
       from: r.lldpNeighborTable.remoteInterfaceId,
       to: r.interfaceTable.id,
+    }),
+  },
+  routeTable: {
+    device: r.one.deviceTable({
+      from: r.routeTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+  },
+  entityPhysicalTable: {
+    device: r.one.deviceTable({
+      from: r.entityPhysicalTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+  },
+  ipSnmpTable: {
+    device: r.one.deviceTable({
+      from: r.ipSnmpTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+    addrEntries: r.many.ipAddrEntryTable({
+      from: r.ipSnmpTable.id,
+      to: r.ipAddrEntryTable.ipSnmpId,
+    }),
+    netToMediaEntries: r.many.ipNetToMediaTable({
+      from: r.ipSnmpTable.id,
+      to: r.ipNetToMediaTable.ipSnmpId,
+    }),
+  },
+  ipAddrEntryTable: {
+    ipSnmp: r.one.ipSnmpTable({
+      from: r.ipAddrEntryTable.ipSnmpId,
+      to: r.ipSnmpTable.id,
+    }),
+  },
+  ipNetToMediaTable: {
+    ipSnmp: r.one.ipSnmpTable({
+      from: r.ipNetToMediaTable.ipSnmpId,
+      to: r.ipSnmpTable.id,
     }),
   },
 }));

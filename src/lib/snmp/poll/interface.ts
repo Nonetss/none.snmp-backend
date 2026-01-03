@@ -111,12 +111,45 @@ export async function pollInterfaces(deviceId?: number) {
         }
       }
 
-      const interfacesList = Array.from(interfacesMap.values());
+      const interfacesListRaw = Array.from(interfacesMap.values());
 
-      if (interfacesList.length === 0) {
+      if (interfacesListRaw.length === 0) {
         console.log(`[Interface Poll] ${device.ipv4}: No interfaces found`);
         return;
       }
+
+      // --- DEDUPLICACIÓN POR MAC (REQUISITO: 1 MAC por Dispositivo) ---
+      const finalInterfacesMap = new Map<number, any>();
+      const macToBestIndex = new Map<
+        string,
+        { index: number; score: number }
+      >();
+
+      for (const iface of interfacesListRaw) {
+        const mac = iface.ifPhysAddress?.toString().toUpperCase();
+        const isJunk =
+          !mac ||
+          mac === '00:00:00:00:00:00' ||
+          mac === '00:00:00:00:00:00:00:00';
+
+        if (isJunk) {
+          finalInterfacesMap.set(Number(iface.ifIndex), iface);
+          continue;
+        }
+
+        // Puntuación para elegir la "mejor" interfaz: UP (1) suma 100 puntos, menor ifIndex suma puntos inversos
+        const score =
+          (iface.ifOperStatus === 1 ? 1000 : 0) - Number(iface.ifIndex);
+        const existing = macToBestIndex.get(mac);
+
+        if (!existing || score > existing.score) {
+          if (existing) finalInterfacesMap.delete(existing.index);
+          macToBestIndex.set(mac, { index: Number(iface.ifIndex), score });
+          finalInterfacesMap.set(Number(iface.ifIndex), iface);
+        }
+      }
+
+      const interfacesList = Array.from(finalInterfacesMap.values());
 
       // Paso 1: Upsert Interfaces Estáticas
       await db
