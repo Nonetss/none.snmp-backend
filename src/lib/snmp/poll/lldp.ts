@@ -26,7 +26,7 @@ function formatValue(name: string, value: any): any {
   if (value === null || value === undefined) return null;
 
   if (Buffer.isBuffer(value)) {
-    // Detección de MAC o datos binarios
+    // 1. Caso binario (6 bytes)
     if (value.length === 6) {
       const isPrintable = value.every((b) => b >= 32 && b <= 126);
       if (!isPrintable) {
@@ -35,19 +35,24 @@ function formatValue(name: string, value: any): any {
           .join(':');
       }
     }
-
+    // 2. Caso binario genérico (Bits de capacidades)
     if (name === 'lldpRemSysCapSupported' || name === 'lldpRemSysCapEnabled') {
       return value.toString('hex').toUpperCase();
     }
   }
 
-  if (name === 'lldpRemChassisIdSubtype' || name === 'lldpRemPortIdSubtype') {
-    return parseInt(String(value), 10);
+  const strValue = sanitizeString(value).trim();
+
+  // 3. Normalizar MACs que vienen como String (ej: "00-aa-11-bb-cc-dd" o "00aa.11bb.ccdd")
+  if (
+    /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
+    /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
+  ) {
+    const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
+    return clean.match(/.{1,2}/g)?.join(':') || clean;
   }
 
-  return sanitizeString(value)
-    .replace(/[^\x20-\x7E]/g, '')
-    .trim();
+  return strValue.replace(/[^\x20-\x7E]/g, '');
 }
 
 /**
@@ -84,9 +89,15 @@ export async function pollLldp(deviceId?: number) {
   // 2. Cache para resolución de topología
   const allDevices = await db.select().from(deviceTable);
   const deviceIpMap = new Map(allDevices.map((d) => [d.ipv4, d.id]));
+  // Mapa de Nombre (normalizado) -> deviceId
+  const deviceNameMap = new Map(
+    allDevices
+      .filter((d) => d.name)
+      .map((d) => [d.name!.toLowerCase().split('.')[0], d.id]),
+  );
 
   const allInterfaces = await db.select().from(interfaceTable);
-  // Mapa de MAC -> deviceId para resolver dispositivos por Chassis ID
+  // Mapa de MAC -> deviceId para resolver dispositivos por Chassis ID o Port ID
   const interfaceMacMap = new Map<string, number>();
   // Mapa de deviceId -> [interfaces] para resolver la interfaz remota exacta
   const deviceInterfacesMap = new Map<number, (typeof allInterfaces)[0][]>();
@@ -179,18 +190,46 @@ export async function pollLldp(deviceId?: number) {
           .insert(lldpNeighborTable)
           .values(
             neighborEntries.map((n) => {
-              // 1. Intentar resolver remoteDeviceId
+              // --- ESTRATEGIA DE RESOLUCIÓN AGRESIVA ---
               let remoteDeviceId: number | null = null;
+
+              const cleanName = (s: string | null) =>
+                s ? s.toLowerCase().split('.')[0] : null;
+
+              // 1. Por IP de Gestión
               if (n.mgmtAddress && deviceIpMap.has(n.mgmtAddress)) {
                 remoteDeviceId = deviceIpMap.get(n.mgmtAddress)!;
-              } else if (
+              }
+
+              // 2. Por MAC de Chasis (Subtype 4)
+              if (
+                !remoteDeviceId &&
                 n.lldpRemChassisIdSubtype === 4 &&
-                n.lldpRemChassisId &&
-                interfaceMacMap.has(n.lldpRemChassisId.toUpperCase())
+                n.lldpRemChassisId
               ) {
                 remoteDeviceId = interfaceMacMap.get(
                   n.lldpRemChassisId.toUpperCase(),
-                )!;
+                );
+              }
+
+              // 3. Por MAC de Puerto (A veces el puerto anuncia la MAC del equipo)
+              if (
+                !remoteDeviceId &&
+                n.lldpRemPortId &&
+                /^[0-9A-F:]{17}$/i.test(n.lldpRemPortId)
+              ) {
+                remoteDeviceId = interfaceMacMap.get(
+                  n.lldpRemPortId.toUpperCase(),
+                );
+              }
+
+              // 4. Por Nombre de Sistema
+              if (!remoteDeviceId) {
+                const nameToTry =
+                  cleanName(n.lldpRemSysName) || cleanName(n.lldpRemChassisId);
+                if (nameToTry && deviceNameMap.has(nameToTry)) {
+                  remoteDeviceId = deviceNameMap.get(nameToTry)!;
+                }
               }
 
               // 2. Intentar resolver remoteInterfaceId si tenemos el dispositivo
@@ -201,7 +240,10 @@ export async function pollLldp(deviceId?: number) {
                 const pId = n.portId.toUpperCase();
 
                 const found = remoteIfaces.find((i) => {
-                  if (n.portIdSubtype === 3)
+                  if (
+                    n.portIdSubtype === 3 ||
+                    /^[0-9A-F:]{17}$/i.test(n.portId)
+                  )
                     return i.ifPhysAddress?.toUpperCase() === pId; // MAC
                   if (n.portIdSubtype === 5)
                     return i.ifName?.toUpperCase() === pId; // ifName

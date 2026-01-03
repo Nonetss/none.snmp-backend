@@ -26,7 +26,7 @@ function formatValue(name: string, value: any): any {
       return `${value[0]}.${value[1]}.${value[2]}.${value[3]}`;
     }
 
-    // 2. Detección de MAC o datos binarios (6 bytes no imprimibles)
+    // 2. MAC Binaria
     if (value.length === 6) {
       const isPrintable = value.every((b) => b >= 32 && b <= 126);
       if (!isPrintable) {
@@ -37,11 +37,18 @@ function formatValue(name: string, value: any): any {
     }
   }
 
-  // 3. Limpieza de strings (Agresivo ASCII para CDP para evitar basura binaria)
-  // Se elimina cualquier carácter fuera del rango ASCII imprimible (incluyendo replacement chars )
-  return sanitizeString(value)
-    .replace(/[^\x20-\x7E]/g, '')
-    .trim();
+  const strValue = sanitizeString(value).trim();
+
+  // 3. Normalizar MACs que vienen como String
+  if (
+    /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
+    /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
+  ) {
+    const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
+    return clean.match(/.{1,2}/g)?.join(':') || clean;
+  }
+
+  return strValue.replace(/[^\x20-\x7E]/g, '');
 }
 
 export async function pollCdp(deviceId?: number) {
@@ -61,6 +68,20 @@ export async function pollCdp(deviceId?: number) {
   // 2. Cache para resolución de topología
   const allDevices = await db.select().from(deviceTable);
   const deviceIpMap = new Map(allDevices.map((d) => [d.ipv4, d.id]));
+  const deviceNameMap = new Map(
+    allDevices
+      .filter((d) => d.name)
+      .map((d) => [d.name!.toLowerCase().split('.')[0], d.id]),
+  );
+
+  const allInterfaces = await db.select().from(interfaceTable);
+  const deviceInterfacesMap = new Map<number, (typeof allInterfaces)[0][]>();
+
+  for (const iface of allInterfaces) {
+    const list = deviceInterfacesMap.get(iface.deviceId) || [];
+    list.push(iface);
+    deviceInterfacesMap.set(iface.deviceId, list);
+  }
 
   // 3. Obtener dispositivo(s)
   const query = db
@@ -134,10 +155,40 @@ export async function pollCdp(deviceId?: number) {
           .insert(cdpNeighborTable)
           .values(
             neighborEntries.map((n) => {
-              // Intentar resolver remoteDeviceId por IP
+              // --- ESTRATEGIA DE RESOLUCIÓN AGRESIVA ---
               let remoteDeviceId: number | null = null;
+
+              const cleanName = (s: string | null) =>
+                s ? s.toLowerCase().split('.')[0] : null;
+
+              // 1. Por IP (cdpCacheAddress)
               if (n.cdpCacheAddress && deviceIpMap.has(n.cdpCacheAddress)) {
                 remoteDeviceId = deviceIpMap.get(n.cdpCacheAddress)!;
+              }
+
+              // 2. Por Nombre (SysName o DeviceId)
+              if (!remoteDeviceId) {
+                const nameToTry =
+                  cleanName(n.cdpCacheSysName) || cleanName(n.cdpCacheDeviceId);
+                if (nameToTry && deviceNameMap.has(nameToTry)) {
+                  remoteDeviceId = deviceNameMap.get(nameToTry)!;
+                }
+              }
+
+              // 3. Intentar resolver remoteInterfaceId si tenemos el dispositivo
+              let remoteInterfaceId: number | null = null;
+              if (remoteDeviceId && n.cdpCacheDevicePort) {
+                const remoteIfaces =
+                  deviceInterfacesMap.get(remoteDeviceId) || [];
+                const pName = n.cdpCacheDevicePort.toUpperCase();
+
+                const found = remoteIfaces.find(
+                  (i) =>
+                    i.ifName?.toUpperCase() === pName ||
+                    i.ifDescr?.toUpperCase() === pName ||
+                    String(i.ifIndex) === pName,
+                );
+                if (found) remoteInterfaceId = found.id;
               }
 
               return {
@@ -151,6 +202,7 @@ export async function pollCdp(deviceId?: number) {
                 neighborPlatform: n.cdpCachePlatform,
                 neighborSysName: n.cdpCacheSysName,
                 remoteDeviceId,
+                remoteInterfaceId,
               };
             }),
           )
@@ -168,6 +220,7 @@ export async function pollCdp(deviceId?: number) {
               neighborPlatform: sql`EXCLUDED.neighbor_platform`,
               neighborSysName: sql`EXCLUDED.neighbor_sys_name`,
               remoteDeviceId: sql`EXCLUDED.remote_device_id`,
+              remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
               updatedAt: new Date(),
             },
           });
