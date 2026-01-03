@@ -2,6 +2,7 @@ import { db } from '@/core/config';
 import {
   metricObjectsTable,
   deviceTable,
+  interfaceTable,
   snmpAuthTable,
   lldpNeighborTable,
 } from '@/db';
@@ -18,6 +19,7 @@ const LLDP_METRICS = [
   'lldpRemSysDesc',
   'lldpRemSysCapSupported',
   'lldpRemSysCapEnabled',
+  'lldpRemManAddrIfSubtype',
 ] as const;
 
 function formatValue(name: string, value: any): any {
@@ -35,7 +37,6 @@ function formatValue(name: string, value: any): any {
     }
 
     if (name === 'lldpRemSysCapSupported' || name === 'lldpRemSysCapEnabled') {
-      // Los bits en SNMP suelen venir como buffer. Los pasamos a hex para legibilidad
       return value.toString('hex').toUpperCase();
     }
   }
@@ -44,10 +45,26 @@ function formatValue(name: string, value: any): any {
     return parseInt(String(value), 10);
   }
 
-  // Limpieza agresiva para strings de vecinos
   return sanitizeString(value)
     .replace(/[^\x20-\x7E]/g, '')
     .trim();
+}
+
+/**
+ * Extrae la dirección de gestión del índice de SNMP.
+ * lldpRemManAddrTable index: [timeMark, localPortNum, neighborIndex, subtype, length, ...address]
+ */
+function parseMgmtAddress(indexParts: string[]): string | null {
+  if (indexParts.length < 5) return null;
+  const subtype = parseInt(indexParts[3], 10);
+  const len = parseInt(indexParts[4], 10);
+  const addrParts = indexParts.slice(5, 5 + len);
+
+  if (subtype === 1 && len === 4) {
+    // IPv4
+    return addrParts.join('.');
+  }
+  return null;
 }
 
 export async function pollLldp(deviceId?: number) {
@@ -64,7 +81,26 @@ export async function pollLldp(deviceId?: number) {
     return;
   }
 
-  // 2. Obtener dispositivo(s)
+  // 2. Cache para resolución de topología
+  const allDevices = await db.select().from(deviceTable);
+  const deviceIpMap = new Map(allDevices.map((d) => [d.ipv4, d.id]));
+
+  const allInterfaces = await db.select().from(interfaceTable);
+  // Mapa de MAC -> deviceId para resolver dispositivos por Chassis ID
+  const interfaceMacMap = new Map<string, number>();
+  // Mapa de deviceId -> [interfaces] para resolver la interfaz remota exacta
+  const deviceInterfacesMap = new Map<number, (typeof allInterfaces)[0][]>();
+
+  for (const iface of allInterfaces) {
+    if (iface.ifPhysAddress) {
+      interfaceMacMap.set(iface.ifPhysAddress.toUpperCase(), iface.deviceId);
+    }
+    const list = deviceInterfacesMap.get(iface.deviceId) || [];
+    list.push(iface);
+    deviceInterfacesMap.set(iface.deviceId, list);
+  }
+
+  // 3. Obtener dispositivo(s)
   const query = db
     .select({
       id: deviceTable.id,
@@ -81,10 +117,14 @@ export async function pollLldp(deviceId?: number) {
   const devices = await query;
   console.log(`[LLDP Poll] Processing ${devices.length} devices...`);
 
-  const CONCURRENCY_LIMIT = 5;
-
   const processDevice = async (device: (typeof devices)[0]) => {
     try {
+      // Interfaces locales del dispositivo actual para mapear interfaceId
+      const currentDeviceInterfaces = deviceInterfacesMap.get(device.id) || [];
+      const ifIndexMap = new Map(
+        currentDeviceInterfaces.map((i) => [i.ifIndex, i.id]),
+      );
+
       const promises = metrics.map(async (metric) => {
         try {
           const result = await walkSNMP(
@@ -100,8 +140,6 @@ export async function pollLldp(deviceId?: number) {
       });
 
       const data = await Promise.all(promises);
-
-      // Index key: lldpRemTimeMark.lldpRemLocalPortNum.lldpRemIndex
       const neighborsMap = new Map<string, any>();
 
       for (const { name, result, baseOid } of data) {
@@ -112,17 +150,25 @@ export async function pollLldp(deviceId?: number) {
 
           if (indexParts.length < 3) continue;
 
-          // Ignoramos TimeMark (indexParts[0]) para la llave única del vecino actual
-          const indexKey = indexParts.slice(1).join('.'); // localPortNum.neighborIndex
+          // localPortNum.neighborIndex
+          const indexKey = `${indexParts[1]}.${indexParts[2]}`;
 
           if (!neighborsMap.has(indexKey)) {
             neighborsMap.set(indexKey, {
               localPortNum: parseInt(indexParts[1], 10),
               neighborIndex: parseInt(indexParts[2], 10),
+              mgmtAddress: null,
             });
           }
 
-          neighborsMap.get(indexKey)[name] = formatValue(name, varbind.value);
+          const neighbor = neighborsMap.get(indexKey);
+
+          if (name === 'lldpRemManAddrIfSubtype') {
+            const ip = parseMgmtAddress(indexParts);
+            if (ip) neighbor.mgmtAddress = ip;
+          } else {
+            neighbor[name] = formatValue(name, varbind.value);
+          }
         }
       }
 
@@ -132,20 +178,61 @@ export async function pollLldp(deviceId?: number) {
         await db
           .insert(lldpNeighborTable)
           .values(
-            neighborEntries.map((n) => ({
-              deviceId: device.id,
-              localPortNum: n.localPortNum,
-              neighborIndex: n.neighborIndex,
-              chassisIdSubtype: n.lldpRemChassisIdSubtype,
-              chassisId: n.lldpRemChassisId,
-              portIdSubtype: n.lldpRemPortIdSubtype,
-              portId: n.lldpRemPortId,
-              portDesc: n.lldpRemPortDesc,
-              sysName: n.lldpRemSysName,
-              sysDesc: n.lldpRemSysDesc,
-              sysCapSupported: n.lldpRemSysCapSupported,
-              sysCapEnabled: n.lldpRemSysCapEnabled,
-            })),
+            neighborEntries.map((n) => {
+              // 1. Intentar resolver remoteDeviceId
+              let remoteDeviceId: number | null = null;
+              if (n.mgmtAddress && deviceIpMap.has(n.mgmtAddress)) {
+                remoteDeviceId = deviceIpMap.get(n.mgmtAddress)!;
+              } else if (
+                n.lldpRemChassisIdSubtype === 4 &&
+                n.lldpRemChassisId &&
+                interfaceMacMap.has(n.lldpRemChassisId.toUpperCase())
+              ) {
+                remoteDeviceId = interfaceMacMap.get(
+                  n.lldpRemChassisId.toUpperCase(),
+                )!;
+              }
+
+              // 2. Intentar resolver remoteInterfaceId si tenemos el dispositivo
+              let remoteInterfaceId: number | null = null;
+              if (remoteDeviceId && n.portId) {
+                const remoteIfaces =
+                  deviceInterfacesMap.get(remoteDeviceId) || [];
+                const pId = n.portId.toUpperCase();
+
+                const found = remoteIfaces.find((i) => {
+                  if (n.portIdSubtype === 3)
+                    return i.ifPhysAddress?.toUpperCase() === pId; // MAC
+                  if (n.portIdSubtype === 5)
+                    return i.ifName?.toUpperCase() === pId; // ifName
+                  return (
+                    i.ifName?.toUpperCase() === pId ||
+                    i.ifDescr?.toUpperCase() === pId ||
+                    String(i.ifIndex) === pId
+                  );
+                });
+                if (found) remoteInterfaceId = found.id;
+              }
+
+              return {
+                deviceId: device.id,
+                interfaceId: ifIndexMap.get(n.localPortNum) || null,
+                localPortNum: n.localPortNum,
+                neighborIndex: n.neighborIndex,
+                chassisIdSubtype: n.lldpRemChassisIdSubtype,
+                chassisId: n.lldpRemChassisId,
+                portIdSubtype: n.lldpRemPortIdSubtype,
+                portId: n.lldpRemPortId,
+                portDesc: n.lldpRemPortDesc,
+                sysName: n.lldpRemSysName,
+                sysDesc: n.lldpRemSysDesc,
+                sysCapSupported: n.lldpRemSysCapSupported,
+                sysCapEnabled: n.lldpRemSysCapEnabled,
+                mgmtAddress: n.mgmtAddress,
+                remoteDeviceId,
+                remoteInterfaceId,
+              };
+            }),
           )
           .onConflictDoUpdate({
             target: [
@@ -154,6 +241,7 @@ export async function pollLldp(deviceId?: number) {
               lldpNeighborTable.neighborIndex,
             ],
             set: {
+              interfaceId: sql`EXCLUDED.interface_id`,
               chassisIdSubtype: sql`EXCLUDED.chassis_id_subtype`,
               chassisId: sql`EXCLUDED.chassis_id`,
               portIdSubtype: sql`EXCLUDED.port_id_subtype`,
@@ -163,22 +251,21 @@ export async function pollLldp(deviceId?: number) {
               sysDesc: sql`EXCLUDED.sys_desc`,
               sysCapSupported: sql`EXCLUDED.sys_cap_supported`,
               sysCapEnabled: sql`EXCLUDED.sys_cap_enabled`,
+              mgmtAddress: sql`EXCLUDED.mgmt_address`,
+              remoteDeviceId: sql`EXCLUDED.remote_device_id`,
+              remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
               updatedAt: new Date(),
             },
           });
         console.log(
           `[LLDP Poll] ${device.ipv4}: Success (${neighborEntries.length} neighbors)`,
         );
-      } else {
-        console.log(`[LLDP Poll] ${device.ipv4}: No LLDP neighbors found`);
       }
     } catch (error) {
       console.error(`[LLDP Poll] Error ${device.ipv4}:`, error);
     }
   };
 
-  // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
-
   console.timeEnd('pollLldp');
 }
