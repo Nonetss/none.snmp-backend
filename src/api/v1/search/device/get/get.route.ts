@@ -3,7 +3,7 @@ import { getDeviceSearchResponseSchema } from './get.schema';
 
 export const getDeviceSearchRoute = createRoute({
   method: 'get',
-  path: '/device',
+  path: '/',
   summary: 'Search device by IP or MAC',
   tags: ['Search'],
   description:
