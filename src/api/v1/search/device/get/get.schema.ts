@@ -1,17 +1,15 @@
 import { z } from '@hono/zod-openapi';
 
-export const deviceSearchResultSchema = z.object({
-  deviceId: z.number(),
-  deviceName: z.string().nullable(),
-  deviceIpv4: z.string(),
-  macAddress: z.string().nullable(),
-  assignedIp: z.string().nullable(),
-  ifIndex: z.number().nullable(),
-  ifName: z.string().nullable(),
-  ifDescr: z.string().nullable(),
-  lastSeen: z.string(),
+export const deviceDetailedResultSchema = z.object({
+  id: z.number(),
+  name: z.string().nullable(),
+  ipv4: z.string(),
+  snmpAuthId: z.number().nullable(),
+  subnetId: z.number().nullable(),
   system: z
     .object({
+      id: z.number(),
+      deviceId: z.number(),
       sysDescr: z.string().nullable(),
       sysUpTime: z.string().nullable(),
       sysContact: z.string().nullable(),
@@ -20,6 +18,27 @@ export const deviceSearchResultSchema = z.object({
       sysServices: z.number().nullable(),
     })
     .nullable(),
+  interfaces: z.array(z.any()),
+  ipSnmp: z
+    .object({
+      addrEntries: z.array(z.any()),
+      netToMediaEntries: z.array(z.any()),
+    })
+    .nullable(),
+  neighbor_discovery: z.object({
+    outbound: z.array(z.any()),
+    inbound: z.array(z.any()),
+  }),
+  routes: z.array(z.any()),
+  physicalEntities: z.array(z.any()),
+  resources: z.array(z.any()),
+  bridge: z.object({
+    base: z.any().nullable(),
+    ports: z.array(z.any()),
+    fdb: z.array(z.any()),
+  }),
 });
 
-export const getDeviceSearchResponseSchema = z.array(deviceSearchResultSchema);
+export const getDeviceSearchResponseSchema = z.array(
+  deviceDetailedResultSchema,
+);

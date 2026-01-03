@@ -6,6 +6,7 @@ import {
   numeric,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { deviceTable } from '@/db/models/device/device.table';
 
 // Inventario de interfaces de red detectadas en el dispositivo.
@@ -26,7 +27,14 @@ export const interfaceTable = pgTable(
     ifPhysAddress: varchar('if_phys_address', { length: 100 }), // Dirección MAC
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
-  (t) => [uniqueIndex('device_interface_idx').on(t.deviceId, t.ifIndex)],
+  (t) => [
+    uniqueIndex('device_interface_idx').on(t.deviceId, t.ifIndex),
+    uniqueIndex('device_interface_mac_idx')
+      .on(t.deviceId, t.ifPhysAddress)
+      .where(
+        sql`if_phys_address IS NOT NULL AND if_phys_address != '' AND if_phys_address != '00:00:00:00:00:00' AND if_phys_address != '00:00:00:00:00:00:00:00'`,
+      ),
+  ],
 );
 
 // Telemetría de interfaces de red (Series temporales).

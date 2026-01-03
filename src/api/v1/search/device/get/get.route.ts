@@ -4,13 +4,15 @@ import { getDeviceSearchResponseSchema } from './get.schema';
 export const getDeviceSearchRoute = createRoute({
   method: 'get',
   path: '/',
-  summary: 'Search device by IP or MAC',
+  summary: 'Get detailed device info',
   tags: ['Search'],
   description:
-    'Searches the registered devices using an IP address or a MAC address.',
+    'Returns all available information for a device identified by ID, IP, or MAC.',
   request: {
     query: z.object({
-      q: z.string().openapi({ example: '10.10.1.1' }),
+      id: z.string().optional().openapi({ example: '12' }),
+      ip: z.string().optional().openapi({ example: '10.10.1.1' }),
+      mac: z.string().optional().openapi({ example: '00:11:22:33:44:55' }),
     }),
   },
   responses: {
