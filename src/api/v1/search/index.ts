@@ -3,9 +3,11 @@ import connectionRouter from '@/api/v1/search/connection/index';
 import deviceSearchRouter from '@/api/v1/search/device/get.index';
 import resourceSearchRouter from '@/api/v1/search/resource/get.index';
 import serviceSearchRouter from '@/api/v1/search/service/get.index';
+import statsRouter from '@/api/v1/search/stats/index';
 
 const searchRouter = new OpenAPIHono();
 
+searchRouter.route('/stats', statsRouter);
 searchRouter.route('/', connectionRouter);
 searchRouter.route('/', deviceSearchRouter);
 searchRouter.route('/', resourceSearchRouter);

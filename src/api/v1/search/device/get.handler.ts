@@ -14,12 +14,13 @@ export const getDeviceSearchHandler: RouteHandler<
   typeof getDeviceSearchRoute
 > = async (c) => {
   const { q } = c.req.valid('query');
-  const normalizedQ = q.toUpperCase();
+
+  // Normalizar la entrada: si es MAC, quitar separadores y pasar a Upper
+  const cleanQ = q.replace(/[:.-]/g, '').toUpperCase();
+  const isMac = /^[0-9A-F]{12}$/.test(cleanQ);
+  const formattedMac = isMac ? cleanQ.match(/.{1,2}/g)?.join(':') : null;
 
   try {
-    // Buscamos dispositivos donde:
-    // 1. La IP asignada en ip_addr_entry sea igual a q
-    // 2. O la MAC en interfaceTable sea igual a q
     const results = await db
       .select({
         deviceId: deviceTable.id,
@@ -41,8 +42,9 @@ export const getDeviceSearchHandler: RouteHandler<
         },
       })
       .from(deviceTable)
-      .leftJoin(ipSnmpTable, eq(deviceTable.id, ipSnmpTable.deviceId))
       .leftJoin(interfaceTable, eq(deviceTable.id, interfaceTable.deviceId))
+      .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
+      .leftJoin(ipSnmpTable, eq(deviceTable.id, ipSnmpTable.deviceId))
       .leftJoin(
         ipAddrEntryTable,
         and(
@@ -50,11 +52,14 @@ export const getDeviceSearchHandler: RouteHandler<
           eq(interfaceTable.ifIndex, ipAddrEntryTable.ipAdEntIfIndex),
         ),
       )
-      .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
       .where(
         or(
+          eq(deviceTable.ipv4, q),
           eq(ipAddrEntryTable.ipAdEntAddr, q),
-          eq(interfaceTable.ifPhysAddress, normalizedQ),
+          formattedMac
+            ? eq(interfaceTable.ifPhysAddress, formattedMac)
+            : undefined,
+          eq(interfaceTable.ifPhysAddress, q.toUpperCase()),
         ),
       );
 

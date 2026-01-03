@@ -25,17 +25,33 @@ const LLDP_METRICS = [
 function formatValue(name: string, value: any): any {
   if (value === null || value === undefined) return null;
 
+  // Subtipos y campos numéricos
+
+  if (
+    name.endsWith('Subtype') ||
+    name.endsWith('Index') ||
+    name.endsWith('Num')
+  ) {
+    return parseInt(String(value), 10);
+  }
+
   if (Buffer.isBuffer(value)) {
     // 1. Caso binario (6 bytes)
+
     if (value.length === 6) {
       const isPrintable = value.every((b) => b >= 32 && b <= 126);
+
       if (!isPrintable) {
         return Array.from(value)
+
           .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
+
           .join(':');
       }
     }
+
     // 2. Caso binario genérico (Bits de capacidades)
+
     if (name === 'lldpRemSysCapSupported' || name === 'lldpRemSysCapEnabled') {
       return value.toString('hex').toUpperCase();
     }
@@ -43,12 +59,14 @@ function formatValue(name: string, value: any): any {
 
   const strValue = sanitizeString(value).trim();
 
-  // 3. Normalizar MACs que vienen como String (ej: "00-aa-11-bb-cc-dd" o "00aa.11bb.ccdd")
+  // 3. Normalizar MACs que vienen como String
+
   if (
     /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
     /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
   ) {
     const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
+
     return clean.match(/.{1,2}/g)?.join(':') || clean;
   }
 
@@ -240,13 +258,14 @@ export async function pollLldp(deviceId?: number) {
                 const pId = n.portId.toUpperCase();
 
                 const found = remoteIfaces.find((i) => {
-                  if (
-                    n.portIdSubtype === 3 ||
-                    /^[0-9A-F:]{17}$/i.test(n.portId)
-                  )
-                    return i.ifPhysAddress?.toUpperCase() === pId; // MAC
-                  if (n.portIdSubtype === 5)
-                    return i.ifName?.toUpperCase() === pId; // ifName
+                  const ifMac = i.ifPhysAddress?.toUpperCase();
+
+                  // Si el portId es una MAC (formateada por formatValue), prioridad absoluta a la MAC
+                  if (/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/i.test(pId)) {
+                    if (ifMac === pId) return true;
+                  }
+
+                  // Si no, buscamos por Nombre, Descripción o Índice
                   return (
                     i.ifName?.toUpperCase() === pId ||
                     i.ifDescr?.toUpperCase() === pId ||
