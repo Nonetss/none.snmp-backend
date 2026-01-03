@@ -54,6 +54,8 @@ app.doc('/doc', {
 
 app.get('/scalar', Scalar({ url: '/doc' }));
 
+console.log('Listening on port 3000');
+
 Bun.serve({
   port: 3000,
   fetch: app.fetch,

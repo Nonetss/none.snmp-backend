@@ -2,6 +2,7 @@ import { db } from '@/core/config';
 import {
   metricObjectsTable,
   deviceTable,
+  interfaceTable,
   snmpAuthTable,
   cdpNeighborTable,
 } from '@/db';
@@ -57,9 +58,11 @@ export async function pollCdp(deviceId?: number) {
     return;
   }
 
-  const metricsMap = new Map(metrics.map((m) => [m.name, m]));
+  // 2. Cache para resolución de topología
+  const allDevices = await db.select().from(deviceTable);
+  const deviceIpMap = new Map(allDevices.map((d) => [d.ipv4, d.id]));
 
-  // 2. Obtener dispositivo(s)
+  // 3. Obtener dispositivo(s)
   const query = db
     .select({
       id: deviceTable.id,
@@ -76,10 +79,17 @@ export async function pollCdp(deviceId?: number) {
   const devices = await query;
   console.log(`[CDP Poll] Processing ${devices.length} devices...`);
 
-  const CONCURRENCY_LIMIT = 5;
-
   const processDevice = async (device: (typeof devices)[0]) => {
     try {
+      // Interfaces locales para mapear interfaceId
+      const deviceInterfaces = await db
+        .select()
+        .from(interfaceTable)
+        .where(eq(interfaceTable.deviceId, device.id));
+      const ifIndexMap = new Map(
+        deviceInterfaces.map((i) => [i.ifIndex, i.id]),
+      );
+
       const promises = metrics.map(async (metric) => {
         try {
           const result = await walkSNMP(
@@ -123,16 +133,26 @@ export async function pollCdp(deviceId?: number) {
         await db
           .insert(cdpNeighborTable)
           .values(
-            neighborEntries.map((n) => ({
-              deviceId: device.id,
-              ifIndex: n.ifIndex,
-              neighborIndex: n.neighborIndex,
-              address: n.cdpCacheAddress,
-              neighborDeviceId: n.cdpCacheDeviceId,
-              neighborPort: n.cdpCacheDevicePort,
-              neighborPlatform: n.cdpCachePlatform,
-              neighborSysName: n.cdpCacheSysName,
-            })),
+            neighborEntries.map((n) => {
+              // Intentar resolver remoteDeviceId por IP
+              let remoteDeviceId: number | null = null;
+              if (n.cdpCacheAddress && deviceIpMap.has(n.cdpCacheAddress)) {
+                remoteDeviceId = deviceIpMap.get(n.cdpCacheAddress)!;
+              }
+
+              return {
+                deviceId: device.id,
+                interfaceId: ifIndexMap.get(n.ifIndex) || null,
+                ifIndex: n.ifIndex,
+                neighborIndex: n.neighborIndex,
+                address: n.cdpCacheAddress,
+                neighborDeviceId: n.cdpCacheDeviceId,
+                neighborPort: n.cdpCacheDevicePort,
+                neighborPlatform: n.cdpCachePlatform,
+                neighborSysName: n.cdpCacheSysName,
+                remoteDeviceId,
+              };
+            }),
           )
           .onConflictDoUpdate({
             target: [
@@ -141,11 +161,13 @@ export async function pollCdp(deviceId?: number) {
               cdpNeighborTable.neighborIndex,
             ],
             set: {
+              interfaceId: sql`EXCLUDED.interface_id`,
               address: sql`EXCLUDED.address`,
               neighborDeviceId: sql`EXCLUDED.neighbor_device_id`,
               neighborPort: sql`EXCLUDED.neighbor_port`,
               neighborPlatform: sql`EXCLUDED.neighbor_platform`,
               neighborSysName: sql`EXCLUDED.neighbor_sys_name`,
+              remoteDeviceId: sql`EXCLUDED.remote_device_id`,
               updatedAt: new Date(),
             },
           });
@@ -160,7 +182,6 @@ export async function pollCdp(deviceId?: number) {
     }
   };
 
-  // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
 
   console.timeEnd('pollCdp');

@@ -39,6 +39,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.id,
       to: r.cdpNeighborTable.deviceId,
     }),
+    lldpNeighbors: r.many.lldpNeighborTable({
+      from: r.deviceTable.id,
+      to: r.lldpNeighborTable.deviceId,
+    }),
   },
   subnetTable: {
     devices: r.many.deviceTable({
@@ -144,6 +148,36 @@ export const relations = defineRelations(schema, (r) => ({
     device: r.one.deviceTable({
       from: r.cdpNeighborTable.deviceId,
       to: r.deviceTable.id,
+    }),
+    localInterface: r.one.interfaceTable({
+      from: r.cdpNeighborTable.interfaceId,
+      to: r.interfaceTable.id,
+    }),
+    remoteDevice: r.one.deviceTable({
+      from: r.cdpNeighborTable.remoteDeviceId,
+      to: r.deviceTable.id,
+    }),
+    remoteInterface: r.one.interfaceTable({
+      from: r.cdpNeighborTable.remoteInterfaceId,
+      to: r.interfaceTable.id,
+    }),
+  },
+  lldpNeighborTable: {
+    device: r.one.deviceTable({
+      from: r.lldpNeighborTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+    localInterface: r.one.interfaceTable({
+      from: r.lldpNeighborTable.interfaceId,
+      to: r.interfaceTable.id,
+    }),
+    remoteDevice: r.one.deviceTable({
+      from: r.lldpNeighborTable.remoteDeviceId,
+      to: r.deviceTable.id,
+    }),
+    remoteInterface: r.one.interfaceTable({
+      from: r.lldpNeighborTable.remoteInterfaceId,
+      to: r.interfaceTable.id,
     }),
   },
 }));
