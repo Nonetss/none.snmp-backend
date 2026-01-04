@@ -6,6 +6,8 @@ export const deviceDetailedResultSchema = z.object({
   ipv4: z.string(),
   snmpAuthId: z.number().nullable(),
   subnetId: z.number().nullable(),
+  subnet: z.any().nullable(),
+  snmpAuth: z.any().nullable(),
   system: z
     .object({
       id: z.number(),
@@ -32,10 +34,14 @@ export const deviceDetailedResultSchema = z.object({
   routes: z.array(z.any()),
   physicalEntities: z.array(z.any()),
   resources: z.array(z.any()),
+  applications: z.array(z.any()),
+  services: z.array(z.any()),
   bridge: z.object({
     base: z.any().nullable(),
     ports: z.array(z.any()),
     fdb: z.array(z.any()),
+    fdbQ: z.array(z.any()),
+    vlans: z.array(z.any()),
   }),
 });
 

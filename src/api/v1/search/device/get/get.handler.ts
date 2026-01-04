@@ -2,6 +2,7 @@ import { db } from '@/core/config';
 import {
   deviceTable,
   interfaceTable,
+  interfaceDataTable,
   systemTable,
   ipSnmpTable,
   ipAddrEntryTable,
@@ -16,9 +17,13 @@ import {
   bridgeBaseTable,
   bridgePortTable,
   bridgeFdbTable,
+  bridgeFdbQTable,
+  vlanTable,
   entityPhysicalTable,
+  subnetTable,
+  snmpAuthTable,
 } from '@/db';
-import { eq, or, inArray } from 'drizzle-orm';
+import { eq, or, inArray, desc, sql } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getDeviceSearchRoute } from './get.route';
 
@@ -82,6 +87,8 @@ export const getDeviceSearchHandler: RouteHandler<
           bridgeBaseRow,
           bridgePorts,
           bridgeFdb,
+          bridgeFdbQ,
+          vlans,
           physicalEntities,
         ] = await Promise.all([
           db.select().from(deviceTable).where(eq(deviceTable.id, deviceId)),
@@ -134,6 +141,11 @@ export const getDeviceSearchHandler: RouteHandler<
             .where(eq(bridgeFdbTable.deviceId, deviceId)),
           db
             .select()
+            .from(bridgeFdbQTable)
+            .where(eq(bridgeFdbQTable.deviceId, deviceId)),
+          db.select().from(vlanTable).where(eq(vlanTable.deviceId, deviceId)),
+          db
+            .select()
             .from(entityPhysicalTable)
             .where(eq(entityPhysicalTable.deviceId, deviceId)),
         ]);
@@ -141,9 +153,46 @@ export const getDeviceSearchHandler: RouteHandler<
         const device = deviceRow[0];
         if (!device) return null;
 
+        const [subnetRow, snmpAuthRow] = await Promise.all([
+          db
+            .select()
+            .from(subnetTable)
+            .where(eq(subnetTable.id, device.subnetId)),
+          device.snmpAuthId
+            ? db
+                .select()
+                .from(snmpAuthTable)
+                .where(eq(snmpAuthTable.id, device.snmpAuthId))
+            : Promise.resolve([]),
+        ]);
+
         const system = systemRow[0];
         const bridgeBase = bridgeBaseRow[0];
         const ipSnmp = ipSnmpRows[0];
+
+        // Telemetría de interfaces (último estado)
+        const interfaceIds = interfaces.map((i) => i.id);
+        const allInterfaceData =
+          interfaceIds.length > 0
+            ? await db
+                .select()
+                .from(interfaceDataTable)
+                .where(inArray(interfaceDataTable.interfaceId, interfaceIds))
+                .orderBy(
+                  interfaceDataTable.interfaceId,
+                  desc(interfaceDataTable.time),
+                )
+            : [];
+
+        const interfaceDataMap = new Map();
+        for (const data of allInterfaceData) {
+          if (!interfaceDataMap.has(data.interfaceId)) {
+            interfaceDataMap.set(data.interfaceId, {
+              ...data,
+              time: data.time?.toISOString(),
+            });
+          }
+        }
 
         // Detalles de Red (IPs)
         let ipDetails = null;
@@ -178,9 +227,24 @@ export const getDeviceSearchHandler: RouteHandler<
                 .from(hrSWRunPerfEntryTable)
                 .where(eq(hrSWRunPerfEntryTable.resourceId, res.id)),
             ]);
-            return { ...res, swInstalled, swRun, swRunPerf };
+            return {
+              ...res,
+              swInstalled: swInstalled.map((i) => ({
+                ...i,
+                date: i.date?.toISOString(),
+                hrSWInstalledDate: i.hrSWInstalledDate?.toISOString(),
+              })),
+              swRun: swRun.map((r) => ({ ...r, date: r.date?.toISOString() })),
+              swRunPerf: swRunPerf.map((p) => ({
+                ...p,
+                date: p.date?.toISOString(),
+              })),
+            };
           }),
         );
+
+        const applications = enrichedResources.flatMap((r) => r.swInstalled);
+        const services = enrichedResources.flatMap((r) => r.swRun);
 
         // Consolidar Topología (Vecinos)
         const neighbor_discovery = {
@@ -216,12 +280,15 @@ export const getDeviceSearchHandler: RouteHandler<
 
         return {
           ...device,
+          subnet: subnetRow[0] || null,
+          snmpAuth: snmpAuthRow[0] || null,
           system: system
             ? { ...system, sysUpTime: system.sysUpTime?.toISOString() }
             : null,
           interfaces: interfaces.map((i) => ({
             ...i,
             updatedAt: i.updatedAt?.toISOString(),
+            latestData: interfaceDataMap.get(i.id) || null,
           })),
           ipSnmp: ipDetails,
           neighbor_discovery,
@@ -235,12 +302,22 @@ export const getDeviceSearchHandler: RouteHandler<
             mfgDate: e.mfgDate?.toISOString(),
           })),
           resources: enrichedResources,
+          applications,
+          services,
           bridge: {
             base: bridgeBase,
             ports: bridgePorts,
             fdb: bridgeFdb.map((f) => ({
               ...f,
               updatedAt: f.updatedAt?.toISOString(),
+            })),
+            fdbQ: bridgeFdbQ.map((f) => ({
+              ...f,
+              updatedAt: f.updatedAt?.toISOString(),
+            })),
+            vlans: vlans.map((v) => ({
+              ...v,
+              updatedAt: v.updatedAt?.toISOString(),
             })),
           },
         };
