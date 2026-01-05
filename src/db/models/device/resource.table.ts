@@ -5,7 +5,7 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { deviceTable } from '@/db';
+import { deviceTable } from '@/db/models/device/device.table';
 
 export const resourceTable = pgTable(
   'resource',

@@ -1,5 +1,6 @@
 import { pgTable, varchar, integer } from 'drizzle-orm/pg-core';
-import { subnetTable, snmpAuthTable } from '@/db';
+import { subnetTable } from '@/db/models/subnet.table';
+import { snmpAuthTable } from '@/db/models/snmpAuth.table';
 
 export const deviceTable = pgTable('device', {
   id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
