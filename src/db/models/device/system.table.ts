@@ -5,7 +5,7 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { deviceTable } from '@/db';
+import { deviceTable } from '@/db/models/device/device.table';
 
 // https://mibbrowser.online/mibdb_search.php?mib=SNMPv2-MIB
 
