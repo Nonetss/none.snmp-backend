@@ -1,2 +1,0 @@
-DROP VIEW IF EXISTS "lldp_view";--> statement-breakpoint
-CREATE VIEW "lldp_view" AS (select "lldp_neighbor"."id" as "id", "lldp_neighbor"."device_id" as "device_id", "lldp_neighbor"."interface_id" as "interface_id", "device"."name" as "device_name", "device"."ipv4" as "device_ipv4", "interface"."if_descr" as "interface_name", "interface"."id" as "port_destination" from "lldp_neighbor" left join "device" on "lldp_neighbor"."device_id" = "device"."id" left join "interface" on "lldp_neighbor"."interface_id" = "interface"."id");

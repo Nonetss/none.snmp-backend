@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "device_interface_mac_idx" ON "interface" ("device_id","if_phys_address") WHERE if_phys_address IS NOT NULL AND if_phys_address != '' AND if_phys_address != '00:00:00:00:00:00' AND if_phys_address != '00:00:00:00:00:00:00:00';

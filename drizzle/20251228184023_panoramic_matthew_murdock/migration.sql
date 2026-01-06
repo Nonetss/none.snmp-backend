@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "device_interface_idx" ON "interface" ("device_id","if_index");

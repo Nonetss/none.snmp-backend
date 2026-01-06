@@ -1,2 +1,0 @@
-ALTER TABLE "vlan" ALTER COLUMN "egress_ports" SET DATA TYPE text USING "egress_ports"::text;--> statement-breakpoint
-ALTER TABLE "vlan" ALTER COLUMN "untagged_ports" SET DATA TYPE text USING "untagged_ports"::text;

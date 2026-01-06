@@ -1,1 +1,0 @@
-ALTER TABLE "interface" RENAME COLUMN "interface_index" TO "if_index";

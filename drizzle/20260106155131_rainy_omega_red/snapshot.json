@@ -1,8 +1,8 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c9dda8aa-ef29-49de-a102-0f332cf8802c",
-  "prevIds": ["7d5e2586-7590-45bf-9187-27d00fc68a73"],
+  "id": "3cf9b7bf-73bc-4b87-a641-13de13a105c8",
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
   "ddl": [
     {
       "isRlsEnabled": false,
@@ -1615,7 +1615,7 @@
     {
       "type": "integer",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -1626,27 +1626,14 @@
       "table": "lldp_neighbor"
     },
     {
-      "type": "integer",
+      "type": "varchar(255)",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "local_port_num",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lldp_neighbor"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "neighbor_index",
+      "name": "lldp_rem_chassis_id",
       "entityType": "columns",
       "schema": "public",
       "table": "lldp_neighbor"
@@ -1659,7 +1646,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "chassis_id_subtype",
+      "name": "lldp_rem_port_id_subtype",
       "entityType": "columns",
       "schema": "public",
       "table": "lldp_neighbor"
@@ -1672,20 +1659,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "chassis_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lldp_neighbor"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "port_id_subtype",
+      "name": "lldp_rem_port_id",
       "entityType": "columns",
       "schema": "public",
       "table": "lldp_neighbor"
@@ -1698,85 +1672,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "port_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lldp_neighbor"
-    },
-    {
-      "type": "varchar(255)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "port_desc",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lldp_neighbor"
-    },
-    {
-      "type": "varchar(255)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "sys_name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lldp_neighbor"
-    },
-    {
-      "type": "varchar(1024)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "sys_desc",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lldp_neighbor"
-    },
-    {
-      "type": "varchar(100)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "sys_cap_supported",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lldp_neighbor"
-    },
-    {
-      "type": "varchar(100)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "sys_cap_enabled",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lldp_neighbor"
-    },
-    {
-      "type": "varchar(100)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "mgmt_address",
+      "name": "lldp_rem_sys_name",
       "entityType": "columns",
       "schema": "public",
       "table": "lldp_neighbor"
@@ -3265,14 +3161,7 @@
           "opclass": null
         },
         {
-          "value": "local_port_num",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "neighbor_index",
+          "value": "interface_id",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -3950,7 +3839,7 @@
       "entityType": "uniques"
     },
     {
-      "definition": "select \"lldp_neighbor\".\"id\" as \"id\", \"lldp_neighbor\".\"device_id\" as \"device_id\", \"lldp_neighbor\".\"interface_id\" as \"interface_id\", \"device\".\"name\" as \"device_name\", \"device\".\"ipv4\" as \"device_ipv4\", \"interface\".\"if_descr\" as \"interface_name\", \"interface\".\"id\" as \"port_destination\" from \"lldp_neighbor\" left join \"device\" on \"lldp_neighbor\".\"device_id\" = \"device\".\"id\" left join \"interface\" on \"lldp_neighbor\".\"interface_id\" = \"interface\".\"id\"",
+      "definition": "select \"lldp_neighbor\".\"id\" as \"id\", \"lldp_neighbor\".\"device_id\" as \"local_device_id\", \"local_device\".\"name\" as \"local_device_name\", \"local_device\".\"ipv4\" as \"local_device_ipv4\", \"lldp_neighbor\".\"interface_id\" as \"local_interface_id\", \"local_interface\".\"if_name\" as \"local_interface_name\", \"local_interface\".\"if_descr\" as \"local_interface_desc\", \"lldp_neighbor\".\"lldp_rem_sys_name\" as \"neighbor_sys_name\", \"lldp_neighbor\".\"lldp_rem_port_id\" as \"neighbor_port_id\", \"lldp_neighbor\".\"lldp_rem_chassis_id\" as \"neighbor_chassis_id\", \"lldp_neighbor\".\"remote_device_id\" as \"remote_device_id\", \"remote_device\".\"name\" as \"remote_device_name\", \"remote_device\".\"ipv4\" as \"remote_device_ipv4\", \"lldp_neighbor\".\"remote_interface_id\" as \"remote_interface_id\", \"remote_interface\".\"if_name\" as \"remote_interface_name\", \"lldp_neighbor\".\"updated_at\" as \"updated_at\" from \"lldp_neighbor\" left join \"device\" \"local_device\" on \"lldp_neighbor\".\"device_id\" = \"local_device\".\"id\" left join \"interface\" \"local_interface\" on \"lldp_neighbor\".\"interface_id\" = \"local_interface\".\"id\" left join \"device\" \"remote_device\" on \"lldp_neighbor\".\"remote_device_id\" = \"remote_device\".\"id\" left join \"interface\" \"remote_interface\" on \"lldp_neighbor\".\"remote_interface_id\" = \"remote_interface\".\"id\"",
       "with": null,
       "withNoData": null,
       "using": null,
