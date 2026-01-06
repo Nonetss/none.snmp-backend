@@ -1,8 +1,12 @@
 import { z } from '@hono/zod-openapi';
 
 export const connectionSearchSchema = z.object({
-  query: z.string().openapi({
-    description: 'IP or MAC address to search for',
+  mac: z.string().optional().openapi({
+    description: 'MAC address to search for',
+    example: '00:11:22:33:44:55',
+  }),
+  ip: z.string().optional().openapi({
+    description: 'IP address to search for',
     example: '192.168.1.50',
   }),
 });

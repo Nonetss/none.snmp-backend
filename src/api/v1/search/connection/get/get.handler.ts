@@ -41,33 +41,47 @@ const formatSpeed = (speed: number | null): string | null => {
 export const getConnectionSearchHandler: RouteHandler<
   typeof getConnectionSearchRoute
 > = async (c) => {
-  const { query } = c.req.valid('query');
+  const { mac, ip } = c.req.valid('query');
 
   try {
-    // Normalizar la query si es una MAC (Quitar separadores y pasar a Upper)
-    const cleanMac = query.replace(/[:.-]/g, '').toUpperCase();
-    let targetMacs: string[] = [query.toUpperCase()];
+    const targetMacs: string[] = [];
+    const ipMap = new Map<string, string>();
 
-    // Si parece una MAC de 12 chars, generar versión formateada para la búsqueda
-    if (/^[0-9A-F]{12}$/.test(cleanMac)) {
-      const formatted = cleanMac.match(/.{1,2}/g)?.join(':');
-      if (formatted) targetMacs = [formatted];
-    }
-    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(query)) {
+    // 1. Procesar IP si se proporciona
+    if (ip) {
       const arpEntries = await db
         .select()
         .from(ipNetToMediaTable)
-        .where(eq(ipNetToMediaTable.ipNetToMediaNetAddress, query));
+        .where(eq(ipNetToMediaTable.ipNetToMediaNetAddress, ip));
 
       if (arpEntries.length > 0) {
-        targetMacs = arpEntries.map((e) => e.ipNetToMediaPhysAddress);
-        arpEntries.forEach((e) => ipMap.set(e.ipNetToMediaPhysAddress, query));
-      } else {
-        return c.json([], 200);
+        for (const e of arpEntries) {
+          targetMacs.push(e.ipNetToMediaPhysAddress);
+          ipMap.set(e.ipNetToMediaPhysAddress, ip);
+        }
       }
     }
 
-    // 1. Encontrar en qué switches/puertos está la MAC
+    // 2. Procesar MAC si se proporciona
+    if (mac) {
+      const cleanMac = mac.replace(/[:.-]/g, '').toUpperCase();
+      let macToSearch: string | null = null;
+
+      if (/^[0-9A-F]{12}$/.test(cleanMac)) {
+        macToSearch = cleanMac.match(/.{1,2}/g)?.join(':') || null;
+      }
+
+      if (macToSearch && !targetMacs.includes(macToSearch)) {
+        targetMacs.push(macToSearch);
+      } else if (!macToSearch) {
+        // Si no es una MAC válida de 12 caracteres, al menos la buscamos tal cual la pusieron en upper
+        targetMacs.push(mac.toUpperCase());
+      }
+    }
+
+    if (targetMacs.length === 0) return c.json([], 200);
+
+    // 3. Encontrar en qué switches/puertos está la MAC
     // --- A. Búsqueda en LLDP (Máxima confianza) ---
     const lldpMatches = await db
       .select({

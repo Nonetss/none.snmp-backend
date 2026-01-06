@@ -403,6 +403,7 @@ export const getConnectionGraphHandler: Handler = async (c) => {
       ip: dev.ipv4,
       type: 'managed',
       details: {
+        id: dev.id,
         name: dev.name,
         ipv4: dev.ipv4,
         system: dev.system

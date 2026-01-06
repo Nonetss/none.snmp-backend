@@ -1,5 +1,8 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { connectionSearchResponseSchema } from './get.schema';
+import {
+  connectionSearchResponseSchema,
+  connectionSearchSchema,
+} from './get.schema';
 
 export const getConnectionSearchRoute = createRoute({
   method: 'get',
@@ -9,9 +12,7 @@ export const getConnectionSearchRoute = createRoute({
   description:
     'Searches the ARP/Neighbor tables to find which device and port a specific IP or MAC is connected to.',
   request: {
-    query: z.object({
-      query: z.string().openapi({ example: '10.10.1.50' }),
-    }),
+    query: connectionSearchSchema,
   },
   responses: {
     200: {
