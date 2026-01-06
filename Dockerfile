@@ -31,6 +31,7 @@ COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /app/src src
 COPY --from=prerelease /app/tsconfig.json .
 COPY --from=prerelease /app/package.json .
+COPY --from=prerelease /app/drizzle.config.ts .
 COPY --from=prerelease /app/OID OID
 COPY --from=prerelease /app/drizzle drizzle
 
@@ -43,4 +44,4 @@ RUN apt-get update && apt-get install -y \
 # Run the app
 USER bun
 EXPOSE 3000/tcp
-ENTRYPOINT [ "bun", "run", "src/index.ts" ]
+CMD [ "bun", "run", "src/index.ts" ]
