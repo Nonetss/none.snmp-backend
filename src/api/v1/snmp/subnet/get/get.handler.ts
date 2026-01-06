@@ -1,6 +1,6 @@
 import { db } from '@/core/config';
-import { subnetTable } from '@/db';
-import { eq } from 'drizzle-orm';
+import { subnetTable, deviceTable } from '@/db';
+import { eq, sql } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getSubnetRoute } from './get.route';
 
@@ -11,9 +11,16 @@ export const getSubnetHandler: RouteHandler<typeof getSubnetRoute> = async (
 
   try {
     const [subnet] = await db
-      .select()
+      .select({
+        id: subnetTable.id,
+        cidr: subnetTable.cidr,
+        name: subnetTable.name,
+        deviceCount: sql<number>`cast(count(${deviceTable.id}) as int)`,
+      })
       .from(subnetTable)
-      .where(eq(subnetTable.id, id));
+      .leftJoin(deviceTable, eq(subnetTable.id, deviceTable.subnetId))
+      .where(eq(subnetTable.id, id))
+      .groupBy(subnetTable.id);
 
     if (!subnet) {
       return c.json({ message: 'Subnet not found' }, 404) as any;

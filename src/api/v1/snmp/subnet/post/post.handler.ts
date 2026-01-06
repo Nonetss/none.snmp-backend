@@ -17,7 +17,7 @@ export const postSubnetHandler: RouteHandler<typeof postSubnetRoute> = async (
       })
       .returning();
 
-    return c.json(newSubnet, 201);
+    return c.json({ ...newSubnet, deviceCount: 0 }, 201);
   } catch (error) {
     console.error('Error creating subnet:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;

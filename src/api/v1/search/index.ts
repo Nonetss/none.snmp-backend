@@ -1,6 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import connectionRouter from '@/api/v1/search/connection/index';
 import deviceRouter from '@/api/v1/search/device/index';
+
 import resourceRouter from '@/api/v1/search/resource/index';
 import serviceRouter from '@/api/v1/search/service/index';
 import systemRouter from '@/api/v1/search/system/index';
@@ -16,6 +17,7 @@ import statsRouter from '@/api/v1/search/stats/index';
 const searchRouter = new OpenAPIHono();
 
 searchRouter.route('/stats', statsRouter);
+
 searchRouter.route('/system', systemRouter);
 searchRouter.route('/interface', interfaceRouter);
 searchRouter.route('/ip', ipRouter);

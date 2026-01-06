@@ -4,6 +4,7 @@ export const SubnetSchema = z.object({
   id: z.number().openapi({ example: 1 }),
   cidr: z.string().openapi({ example: '10.10.1.0/24' }),
   name: z.string().nullable().openapi({ example: 'Main Office' }),
+  deviceCount: z.number().openapi({ example: 5 }),
 });
 
 export const CreateSubnetSchema = z.object({
