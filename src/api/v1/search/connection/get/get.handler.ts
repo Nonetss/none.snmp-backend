@@ -95,14 +95,18 @@ export const getConnectionSearchHandler: RouteHandler<
         switchName: systemTable.sysName,
         switchIp: deviceTable.ipv4,
         switchLocation: systemTable.sysLocation,
-        ifIndex: cdpNeighborTable.ifIndex,
-        macAddress: cdpNeighborTable.neighborDeviceId,
+        ifIndex: interfaceTable.ifIndex,
+        macAddress: cdpNeighborTable.cdpCacheDeviceId,
         lastSeen: cdpNeighborTable.updatedAt,
       })
       .from(cdpNeighborTable)
       .innerJoin(deviceTable, eq(cdpNeighborTable.deviceId, deviceTable.id))
+      .innerJoin(
+        interfaceTable,
+        eq(cdpNeighborTable.interfaceId, interfaceTable.id),
+      )
       .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
-      .where(inArray(cdpNeighborTable.neighborDeviceId, targetMacs));
+      .where(inArray(cdpNeighborTable.cdpCacheDeviceId, targetMacs));
 
     // --- C. Búsqueda en FDB (Tradicional) ---
     const fdbEntries = await db

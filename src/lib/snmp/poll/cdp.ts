@@ -14,6 +14,7 @@ const CDP_METRICS = [
   'cdpCacheDeviceId',
   'cdpCacheDevicePort',
   'cdpCachePlatform',
+  'cdpCacheCapabilities',
   'cdpCacheSysName',
 ] as const;
 
@@ -26,7 +27,12 @@ function formatValue(name: string, value: any): any {
       return `${value[0]}.${value[1]}.${value[2]}.${value[3]}`;
     }
 
-    // 2. MAC Binaria
+    // 2. Capacidades (Bits/Octet String)
+    if (name === 'cdpCacheCapabilities') {
+      return value.toString('hex').toUpperCase();
+    }
+
+    // 3. MAC Binaria
     if (value.length === 6) {
       const isPrintable = value.every((b) => b >= 32 && b <= 126);
       if (!isPrintable) {
@@ -39,7 +45,7 @@ function formatValue(name: string, value: any): any {
 
   const strValue = sanitizeString(value).trim();
 
-  // 3. Normalizar MACs que vienen como String
+  // 4. Normalizar MACs que vienen como String
   if (
     /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
     /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
@@ -102,13 +108,9 @@ export async function pollCdp(deviceId?: number) {
 
   const processDevice = async (device: (typeof devices)[0]) => {
     try {
-      // Interfaces locales para mapear interfaceId
-      const deviceInterfaces = await db
-        .select()
-        .from(interfaceTable)
-        .where(eq(interfaceTable.deviceId, device.id));
+      const currentDeviceInterfaces = deviceInterfacesMap.get(device.id) || [];
       const ifIndexMap = new Map(
-        deviceInterfaces.map((i) => [i.ifIndex, i.id]),
+        currentDeviceInterfaces.map((i) => [i.ifIndex, i.id]),
       );
 
       const promises = metrics.map(async (metric) => {
@@ -151,82 +153,106 @@ export async function pollCdp(deviceId?: number) {
       const neighborEntries = Array.from(neighborsMap.values());
 
       if (neighborEntries.length > 0) {
-        await db
-          .insert(cdpNeighborTable)
-          .values(
-            neighborEntries.map((n) => {
-              // --- ESTRATEGIA DE RESOLUCIÓN AGRESIVA ---
-              let remoteDeviceId: number | null = null;
+        const valuesToInsert = neighborEntries
+          .map((n) => {
+            // --- ESTRATEGIA DE RESOLUCIÓN AGRESIVA ---
+            let remoteDeviceId: number | null = null;
 
-              const cleanName = (s: string | null) =>
-                s ? s.toLowerCase().split('.')[0] : null;
+            const cleanName = (s: string | null) =>
+              s ? s.toLowerCase().split('.')[0] : null;
 
-              // 1. Por IP (cdpCacheAddress)
-              if (n.cdpCacheAddress && deviceIpMap.has(n.cdpCacheAddress)) {
-                remoteDeviceId = deviceIpMap.get(n.cdpCacheAddress)!;
+            // 1. Por IP (cdpCacheAddress)
+            if (n.cdpCacheAddress && deviceIpMap.has(n.cdpCacheAddress)) {
+              remoteDeviceId = deviceIpMap.get(n.cdpCacheAddress)!;
+            }
+
+            // 2. Por Nombre (SysName o DeviceId)
+            if (!remoteDeviceId) {
+              const nameToTry =
+                cleanName(n.cdpCacheSysName) || cleanName(n.cdpCacheDeviceId);
+              if (nameToTry && deviceNameMap.has(nameToTry)) {
+                remoteDeviceId = deviceNameMap.get(nameToTry)!;
               }
+            }
 
-              // 2. Por Nombre (SysName o DeviceId)
-              if (!remoteDeviceId) {
-                const nameToTry =
-                  cleanName(n.cdpCacheSysName) || cleanName(n.cdpCacheDeviceId);
-                if (nameToTry && deviceNameMap.has(nameToTry)) {
-                  remoteDeviceId = deviceNameMap.get(nameToTry)!;
-                }
-              }
+            // 3. Intentar resolver remoteInterfaceId si tenemos el dispositivo
+            let remoteInterfaceId: number | null = null;
+            if (remoteDeviceId && n.cdpCacheDevicePort) {
+              const remoteIfaces =
+                deviceInterfacesMap.get(remoteDeviceId) || [];
+              const pName = n.cdpCacheDevicePort.toUpperCase();
 
-              // 3. Intentar resolver remoteInterfaceId si tenemos el dispositivo
-              let remoteInterfaceId: number | null = null;
-              if (remoteDeviceId && n.cdpCacheDevicePort) {
-                const remoteIfaces =
-                  deviceInterfacesMap.get(remoteDeviceId) || [];
-                const pName = n.cdpCacheDevicePort.toUpperCase();
+              const found = remoteIfaces.find(
+                (i) =>
+                  i.ifName?.toUpperCase() === pName ||
+                  i.ifDescr?.toUpperCase() === pName ||
+                  String(i.ifIndex) === pName,
+              );
+              if (found) remoteInterfaceId = found.id;
+            }
 
-                const found = remoteIfaces.find(
-                  (i) =>
-                    i.ifName?.toUpperCase() === pName ||
-                    i.ifDescr?.toUpperCase() === pName ||
-                    String(i.ifIndex) === pName,
-                );
-                if (found) remoteInterfaceId = found.id;
-              }
+            const interfaceId = ifIndexMap.get(n.ifIndex);
+            if (!interfaceId) {
+              console.warn(
+                `[CDP Poll] ${device.ipv4}: Could not map ifIndex ${n.ifIndex} to any interfaceId. Skipping neighbor.`,
+              );
+              return null;
+            }
 
-              return {
-                deviceId: device.id,
-                interfaceId: ifIndexMap.get(n.ifIndex) || null,
-                ifIndex: n.ifIndex,
-                neighborIndex: n.neighborIndex,
-                address: n.cdpCacheAddress,
-                neighborDeviceId: n.cdpCacheDeviceId,
-                neighborPort: n.cdpCacheDevicePort,
-                neighborPlatform: n.cdpCachePlatform,
-                neighborSysName: n.cdpCacheSysName,
-                remoteDeviceId,
-                remoteInterfaceId,
-              };
-            }),
-          )
-          .onConflictDoUpdate({
-            target: [
-              cdpNeighborTable.deviceId,
-              cdpNeighborTable.ifIndex,
-              cdpNeighborTable.neighborIndex,
-            ],
-            set: {
-              interfaceId: sql`EXCLUDED.interface_id`,
-              address: sql`EXCLUDED.address`,
-              neighborDeviceId: sql`EXCLUDED.neighbor_device_id`,
-              neighborPort: sql`EXCLUDED.neighbor_port`,
-              neighborPlatform: sql`EXCLUDED.neighbor_platform`,
-              neighborSysName: sql`EXCLUDED.neighbor_sys_name`,
-              remoteDeviceId: sql`EXCLUDED.remote_device_id`,
-              remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
-              updatedAt: new Date(),
-            },
-          });
-        console.log(
-          `[CDP Poll] ${device.ipv4}: Success (${neighborEntries.length} neighbors)`,
-        );
+            return {
+              deviceId: device.id,
+              interfaceId: interfaceId,
+              cdpCacheAddress: n.cdpCacheAddress,
+              cdpCacheDeviceId: n.cdpCacheDeviceId,
+              cdpCacheDevicePort: n.cdpCacheDevicePort,
+              cdpCachePlatform: n.cdpCachePlatform,
+              cdpCacheCapabilities: n.cdpCacheCapabilities,
+              cdpCacheSysName: n.cdpCacheSysName,
+              remoteDeviceId,
+              remoteInterfaceId,
+            };
+          })
+          .filter((v): v is NonNullable<typeof v> => v !== null);
+
+        // --- DEDUPLICACIÓN POR INTERFACE_ID ---
+        const deduplicatedMap = new Map<number, (typeof valuesToInsert)[0]>();
+        for (const val of valuesToInsert) {
+          const existing = deduplicatedMap.get(val.interfaceId);
+          if (!existing || (val.remoteDeviceId && !existing.remoteDeviceId)) {
+            deduplicatedMap.set(val.interfaceId, val);
+          }
+        }
+        const finalValues = Array.from(deduplicatedMap.values());
+
+        if (finalValues.length === 0) return;
+
+        try {
+          await db
+            .insert(cdpNeighborTable)
+            .values(finalValues)
+            .onConflictDoUpdate({
+              target: [cdpNeighborTable.deviceId, cdpNeighborTable.interfaceId],
+              set: {
+                cdpCacheAddress: sql`EXCLUDED.cdp_cache_address`,
+                cdpCacheDeviceId: sql`EXCLUDED.cdp_cache_device_id`,
+                cdpCacheDevicePort: sql`EXCLUDED.cdp_cache_device_port`,
+                cdpCachePlatform: sql`EXCLUDED.cdp_cache_platform`,
+                cdpCacheCapabilities: sql`EXCLUDED.cdp_cache_capabilities`,
+                cdpCacheSysName: sql`EXCLUDED.cdp_cache_sys_name`,
+                remoteDeviceId: sql`EXCLUDED.remote_device_id`,
+                remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
+                updatedAt: new Date(),
+              },
+            });
+          console.log(
+            `[CDP Poll] ${device.ipv4}: Successfully saved ${finalValues.length} neighbors`,
+          );
+        } catch (dbError) {
+          console.error(
+            `[CDP Poll] ${device.ipv4}: Error during database insertion:`,
+            dbError,
+          );
+        }
       } else {
         console.log(`[CDP Poll] ${device.ipv4}: No CDP neighbors found`);
       }

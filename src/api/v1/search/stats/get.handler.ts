@@ -45,7 +45,7 @@ export const getStatsHandler: RouteHandler<typeof getStatsRoute> = async (
         SELECT count(DISTINCT id)::int as value FROM (
           SELECT COALESCE(lldp_rem_chassis_id, lldp_rem_sys_name) as id FROM lldp_neighbor WHERE remote_device_id IS NULL
           UNION
-          SELECT neighbor_device_id as id FROM cdp_neighbor WHERE remote_device_id IS NULL
+          SELECT cdp_cache_device_id as id FROM cdp_neighbor WHERE remote_device_id IS NULL
         ) as unique_ext
       `),
       db

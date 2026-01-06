@@ -21,16 +21,17 @@ export const cdpNeighborTable = pgTable(
       .references(() => deviceTable.id),
 
     // Relación con la interfaz local
-    interfaceId: integer('interface_id').references(() => interfaceTable.id),
+    interfaceId: integer('interface_id')
+      .references(() => interfaceTable.id)
+      .notNull(),
 
-    ifIndex: integer('if_index').notNull(), // cdpCacheIfIndex
-    neighborIndex: integer('neighbor_index').notNull(), // cdpCacheDeviceIndex
-
-    address: varchar('address', { length: 100 }), // cdpCacheAddress (Gestión)
-    neighborDeviceId: varchar('neighbor_device_id', { length: 255 }), // cdpCacheDeviceId
-    neighborPort: varchar('neighbor_port', { length: 255 }), // cdpCacheDevicePort
-    neighborPlatform: varchar('neighbor_platform', { length: 255 }), // cdpCachePlatform
-    neighborSysName: varchar('neighbor_sys_name', { length: 255 }), // cdpCacheSysName
+    // Información del vecino (Cisco MIB)
+    cdpCacheAddress: varchar('cdp_cache_address', { length: 100 }), // cdpCacheAddress (IP de gestión)
+    cdpCacheDeviceId: varchar('cdp_cache_device_id', { length: 255 }), // cdpCacheDeviceId (ID del equipo vecino)
+    cdpCacheDevicePort: varchar('cdp_cache_device_port', { length: 255 }), // cdpCacheDevicePort (Puerto del vecino)
+    cdpCachePlatform: varchar('cdp_cache_platform', { length: 255 }), // cdpCachePlatform (Plataforma hardware)
+    cdpCacheCapabilities: varchar('cdp_cache_capabilities', { length: 255 }), // cdpCacheCapabilities
+    cdpCacheSysName: varchar('cdp_cache_sys_name', { length: 255 }), // cdpCacheSysName (Nombre de sistema)
 
     // Resolución de Topología
     remoteDeviceId: integer('remote_device_id').references(
@@ -43,10 +44,6 @@ export const cdpNeighborTable = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (t) => [
-    uniqueIndex('cdp_neighbor_device_if_idx').on(
-      t.deviceId,
-      t.ifIndex,
-      t.neighborIndex,
-    ),
+    uniqueIndex('cdp_neighbor_device_if_idx').on(t.deviceId, t.interfaceId),
   ],
 );

@@ -75,6 +75,7 @@ export const getConnectionGraphHandler: Handler = async (c) => {
   const edgesMap = new Map();
   const occupiedPorts = new Set<string>(); // deviceId-ifIndex
   const devicePairConnectedL2 = new Set<string>(); // minId-maxId
+  const devicesWithL2 = new Set<number>(); // IDs de dispositivos con conexiones L2 confirmadas
 
   const cleanName = (s: string | null) =>
     s ? s.toLowerCase().split('.')[0] : null;
@@ -133,16 +134,16 @@ export const getConnectionGraphHandler: Handler = async (c) => {
   for (const n of allCdp) {
     const sourceDev = deviceIdMap.get(n.deviceId)!;
     const sourceIface = (deviceInterfacesMap.get(n.deviceId) || []).find(
-      (i) => i.id === n.interfaceId || i.ifIndex === n.ifIndex,
+      (i) => i.id === n.interfaceId,
     );
     let remoteDev = n.remoteDeviceId ? deviceIdMap.get(n.remoteDeviceId) : null;
 
     if (!remoteDev) {
-      if (n.address && deviceIpMap.has(n.address))
-        remoteDev = deviceIpMap.get(n.address);
+      if (n.cdpCacheAddress && deviceIpMap.has(n.cdpCacheAddress))
+        remoteDev = deviceIpMap.get(n.cdpCacheAddress);
       else {
         const nameToTry =
-          cleanName(n.neighborSysName) || cleanName(n.neighborDeviceId);
+          cleanName(n.cdpCacheSysName) || cleanName(n.cdpCacheDeviceId);
         const match = allDevices.find(
           (d) =>
             cleanName(d.name) === nameToTry ||
@@ -156,21 +157,21 @@ export const getConnectionGraphHandler: Handler = async (c) => {
       sourceDev,
       sourceIface,
       remoteDev,
-      n.neighborDeviceId,
-      n.neighborSysName,
-      n.address,
-      n.neighborPort,
+      n.cdpCacheDeviceId,
+      n.cdpCacheSysName,
+      n.cdpCacheAddress,
+      n.cdpCacheDevicePort,
       'cdp',
-      n.ifIndex,
+      sourceIface?.ifIndex || 0,
       n.id,
       n.remoteInterfaceId,
+      n.cdpCachePlatform,
+      n.cdpCacheCapabilities,
     );
   }
 
   // 5. PROCESAR FDB (Dispositivos finales sin protocolos de descubrimiento)
-  const devicesWithoutL2 = allDevices.filter(
-    (d) => !devicePairConnectedL2.has(String(d.id)),
-  );
+  const devicesWithoutL2 = allDevices.filter((d) => !devicesWithL2.has(d.id));
   const macsToSearch = devicesWithoutL2.flatMap((d) =>
     (deviceInterfacesMap.get(d.id) || [])
       .map((i) => i.ifPhysAddress?.toUpperCase())
@@ -277,6 +278,8 @@ export const getConnectionGraphHandler: Handler = async (c) => {
     localIndex: number,
     dbId: number,
     remoteInterfaceId?: number | null,
+    neighborPlatform?: string | null,
+    neighborCapabilities?: string | null,
   ) {
     const sourceNodeId = `dev-${sourceDev.id}`;
     if (!nodesMap.has(sourceNodeId))
@@ -293,16 +296,29 @@ export const getConnectionGraphHandler: Handler = async (c) => {
         .sort((a, b) => a - b)
         .join('-');
       devicePairConnectedL2.add(pairKey);
+      devicesWithL2.add(sourceDev.id);
+      devicesWithL2.add(remoteDev.id);
     } else {
       targetNodeId = `ext-${neighborId || neighborName || neighborIp || localIndex}`;
       targetLabel = neighborName || neighborId || 'External Device';
-      if (!nodesMap.has(targetNodeId)) {
+      const existingNode = nodesMap.get(targetNodeId);
+      if (!existingNode) {
         nodesMap.set(targetNodeId, {
           id: targetNodeId,
           label: targetLabel,
           type: 'unmanaged',
           mgmtAddress: neighborIp,
+          platform: neighborPlatform,
+          capabilities: neighborCapabilities,
         });
+      } else if (existingNode.type === 'unmanaged') {
+        // Actualizar info si ahora tenemos más datos (ej: de CDP después de LLDP)
+        if (!existingNode.mgmtAddress && neighborIp)
+          existingNode.mgmtAddress = neighborIp;
+        if (!existingNode.platform && neighborPlatform)
+          existingNode.platform = neighborPlatform;
+        if (!existingNode.capabilities && neighborCapabilities)
+          existingNode.capabilities = neighborCapabilities;
       }
     }
 
@@ -312,6 +328,11 @@ export const getConnectionGraphHandler: Handler = async (c) => {
     if (existing) {
       if (!existing.metadata.protocol.includes(protocol))
         existing.metadata.protocol += `, ${protocol}`;
+      // Enriquecer metadata existente
+      if (!existing.metadata.platform && neighborPlatform)
+        existing.metadata.platform = neighborPlatform;
+      if (!existing.metadata.capabilities && neighborCapabilities)
+        existing.metadata.capabilities = neighborCapabilities;
       return;
     }
 
@@ -366,6 +387,8 @@ export const getConnectionGraphHandler: Handler = async (c) => {
         sysName: targetLabel,
         sourceInterface: sourceInterfaceInfo,
         targetInterface: targetInterfaceInfo,
+        platform: neighborPlatform,
+        capabilities: neighborCapabilities,
       },
     });
     occupiedPorts.add(`${sourceDev.id}-${localIndex}`);
