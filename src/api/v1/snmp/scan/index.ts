@@ -4,7 +4,7 @@ import rescanRouter from '@/api/v1/snmp/scan/rescan/rescan.index';
 
 const scanRouter = new OpenAPIHono();
 
+scanRouter.route('/', rescanRouter);
 scanRouter.route('/', postRouter);
-scanRouter.route('/rescan', rescanRouter);
 
 export default scanRouter;

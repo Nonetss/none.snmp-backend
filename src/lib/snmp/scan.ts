@@ -43,32 +43,41 @@ export async function scanSubnet(subnetId: number) {
     }
 
     if (successfulAuthId) {
-      const [device] = await db
-        .insert(deviceTable)
-        .values({
-          ipv4: ip,
-          subnetId: subnet.id,
-          snmpAuthId: successfulAuthId,
-        })
-        .onConflictDoUpdate({
-          target: [deviceTable.ipv4],
-          set: {
-            snmpAuthId: successfulAuthId,
+      try {
+        const [device] = await db
+          .insert(deviceTable)
+          .values({
+            ipv4: ip,
             subnetId: subnet.id,
-          },
-        })
-        .returning({ id: deviceTable.id });
+            snmpAuthId: successfulAuthId,
+          })
+          .onConflictDoUpdate({
+            target: [deviceTable.ipv4],
+            set: {
+              snmpAuthId: successfulAuthId,
+              subnetId: subnet.id,
+            },
+          })
+          .returning({ id: deviceTable.id });
 
-      if (device) {
-        await pollAll(device.id);
+        if (device) {
+          try {
+            await pollAll(device.id);
+          } catch (pollError) {
+            console.error(`[Scan] Error polling device ${ip}:`, pollError);
+          }
+        }
+
+        return {
+          ip,
+          status: 'success',
+          authId: successfulAuthId,
+          deviceId: device?.id,
+        };
+      } catch (dbError) {
+        console.error(`[Scan] DB error for IP ${ip}:`, dbError);
+        return { ip, status: 'failed' };
       }
-
-      return {
-        ip,
-        status: 'success',
-        authId: successfulAuthId,
-        deviceId: device?.id,
-      };
     }
 
     return { ip, status: 'failed' };
