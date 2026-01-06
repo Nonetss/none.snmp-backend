@@ -43,7 +43,7 @@ export const getStatsHandler: RouteHandler<typeof getStatsRoute> = async (
       db.select({ value: count() }).from(deviceTable),
       db.execute(sql`
         SELECT count(DISTINCT id)::int as value FROM (
-          SELECT COALESCE(chassis_id, sys_name) as id FROM lldp_neighbor WHERE remote_device_id IS NULL
+          SELECT COALESCE(lldp_rem_chassis_id, lldp_rem_sys_name) as id FROM lldp_neighbor WHERE remote_device_id IS NULL
           UNION
           SELECT neighbor_device_id as id FROM cdp_neighbor WHERE remote_device_id IS NULL
         ) as unique_ext

@@ -32,17 +32,13 @@ export const lldpView = pgView('lldp_view').as((qb) =>
       ),
 
       // --- INFORMACIÓN DEL VECINO (SNMP) ---
-      neighborSysName: sql`${lldpNeighborTable.sysName}`.as(
+      neighborSysName: sql`${lldpNeighborTable.lldpRemSysName}`.as(
         'neighbor_sys_name',
       ),
-      neighborPortId: sql`${lldpNeighborTable.portId}`.as('neighbor_port_id'),
-      neighborPortDesc: sql`${lldpNeighborTable.portDesc}`.as(
-        'neighbor_port_desc',
+      neighborPortId: sql`${lldpNeighborTable.lldpRemPortId}`.as(
+        'neighbor_port_id',
       ),
-      neighborMgmtAddress: sql`${lldpNeighborTable.mgmtAddress}`.as(
-        'neighbor_mgmt_address',
-      ),
-      neighborChassisId: sql`${lldpNeighborTable.chassisId}`.as(
+      neighborChassisId: sql`${lldpNeighborTable.lldpRemChassisId}`.as(
         'neighbor_chassis_id',
       ),
 

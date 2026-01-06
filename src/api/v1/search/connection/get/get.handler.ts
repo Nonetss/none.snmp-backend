@@ -75,14 +75,18 @@ export const getConnectionSearchHandler: RouteHandler<
         switchName: systemTable.sysName,
         switchIp: deviceTable.ipv4,
         switchLocation: systemTable.sysLocation,
-        ifIndex: lldpNeighborTable.localPortNum,
-        macAddress: lldpNeighborTable.chassisId,
+        ifIndex: interfaceTable.ifIndex,
+        macAddress: lldpNeighborTable.lldpRemChassisId,
         lastSeen: lldpNeighborTable.updatedAt,
       })
       .from(lldpNeighborTable)
       .innerJoin(deviceTable, eq(lldpNeighborTable.deviceId, deviceTable.id))
+      .innerJoin(
+        interfaceTable,
+        eq(lldpNeighborTable.interfaceId, interfaceTable.id),
+      )
       .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
-      .where(inArray(lldpNeighborTable.chassisId, targetMacs));
+      .where(inArray(lldpNeighborTable.lldpRemChassisId, targetMacs));
 
     // --- B. Búsqueda en CDP ---
     const cdpMatches = await db

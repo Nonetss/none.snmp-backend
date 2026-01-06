@@ -202,126 +202,151 @@ export async function pollLldp(deviceId?: number) {
       }
 
       const neighborEntries = Array.from(neighborsMap.values());
+      console.log(
+        `[LLDP Poll] ${device.ipv4}: Found ${neighborEntries.length} neighbors in SNMP`,
+      );
 
       if (neighborEntries.length > 0) {
-        await db
-          .insert(lldpNeighborTable)
-          .values(
-            neighborEntries.map((n) => {
-              // --- ESTRATEGIA DE RESOLUCIÓN AGRESIVA ---
-              let remoteDeviceId: number | null = null;
+        const valuesToInsert = neighborEntries
+          .map((n) => {
+            // --- ESTRATEGIA DE RESOLUCIÓN AGRESIVA ---
+            let remoteDeviceId: number | null = null;
 
-              const cleanName = (s: string | null) =>
-                s ? s.toLowerCase().split('.')[0] : null;
+            const cleanName = (s: string | null) =>
+              s ? s.toLowerCase().split('.')[0] : null;
 
-              // 1. Por IP de Gestión
-              if (n.mgmtAddress && deviceIpMap.has(n.mgmtAddress)) {
-                remoteDeviceId = deviceIpMap.get(n.mgmtAddress)!;
+            // 1. Por IP de Gestión
+            if (n.mgmtAddress && deviceIpMap.has(n.mgmtAddress)) {
+              remoteDeviceId = deviceIpMap.get(n.mgmtAddress)!;
+            }
+
+            // 2. Por MAC de Chasis (Subtype 4)
+            if (
+              !remoteDeviceId &&
+              n.lldpRemChassisIdSubtype === 4 &&
+              n.lldpRemChassisId
+            ) {
+              remoteDeviceId = interfaceMacMap.get(
+                n.lldpRemChassisId.toUpperCase(),
+              );
+            }
+
+            // 3. Por MAC de Puerto (A veces el puerto anuncia la MAC del equipo)
+            if (
+              !remoteDeviceId &&
+              n.lldpRemPortId &&
+              /^[0-9A-F:]{17}$/i.test(n.lldpRemPortId)
+            ) {
+              remoteDeviceId = interfaceMacMap.get(
+                n.lldpRemPortId.toUpperCase(),
+              );
+            }
+
+            // 4. Por Nombre de Sistema
+            if (!remoteDeviceId) {
+              const nameToTry =
+                cleanName(n.lldpRemSysName) || cleanName(n.lldpRemChassisId);
+              if (nameToTry && deviceNameMap.has(nameToTry)) {
+                remoteDeviceId = deviceNameMap.get(nameToTry)!;
               }
+            }
 
-              // 2. Por MAC de Chasis (Subtype 4)
-              if (
-                !remoteDeviceId &&
-                n.lldpRemChassisIdSubtype === 4 &&
-                n.lldpRemChassisId
-              ) {
-                remoteDeviceId = interfaceMacMap.get(
-                  n.lldpRemChassisId.toUpperCase(),
-                );
-              }
+            // 2. Intentar resolver remoteInterfaceId si tenemos el dispositivo
+            let remoteInterfaceId: number | null = null;
+            if (remoteDeviceId && n.lldpRemPortId) {
+              const remoteIfaces =
+                deviceInterfacesMap.get(remoteDeviceId) || [];
+              const pId = n.lldpRemPortId.toUpperCase();
 
-              // 3. Por MAC de Puerto (A veces el puerto anuncia la MAC del equipo)
-              if (
-                !remoteDeviceId &&
-                n.lldpRemPortId &&
-                /^[0-9A-F:]{17}$/i.test(n.lldpRemPortId)
-              ) {
-                remoteDeviceId = interfaceMacMap.get(
-                  n.lldpRemPortId.toUpperCase(),
-                );
-              }
+              const found = remoteIfaces.find((i) => {
+                const ifMac = i.ifPhysAddress?.toUpperCase();
 
-              // 4. Por Nombre de Sistema
-              if (!remoteDeviceId) {
-                const nameToTry =
-                  cleanName(n.lldpRemSysName) || cleanName(n.lldpRemChassisId);
-                if (nameToTry && deviceNameMap.has(nameToTry)) {
-                  remoteDeviceId = deviceNameMap.get(nameToTry)!;
+                // Si el portId es una MAC (formateada por formatValue), prioridad absoluta a la MAC
+                if (/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/i.test(pId)) {
+                  if (ifMac === pId) return true;
                 }
-              }
 
-              // 2. Intentar resolver remoteInterfaceId si tenemos el dispositivo
-              let remoteInterfaceId: number | null = null;
-              if (remoteDeviceId && n.portId) {
-                const remoteIfaces =
-                  deviceInterfacesMap.get(remoteDeviceId) || [];
-                const pId = n.portId.toUpperCase();
+                // Si no, buscamos por Nombre, Descripción o Índice
+                return (
+                  i.ifName?.toUpperCase() === pId ||
+                  i.ifDescr?.toUpperCase() === pId ||
+                  String(i.ifIndex) === pId
+                );
+              });
+              if (found) remoteInterfaceId = found.id;
+            }
 
-                const found = remoteIfaces.find((i) => {
-                  const ifMac = i.ifPhysAddress?.toUpperCase();
+            const interfaceId = ifIndexMap.get(n.localPortNum);
+            if (!interfaceId) {
+              console.warn(
+                `[LLDP Poll] ${device.ipv4}: Could not map localPortNum ${n.localPortNum} to any interfaceId. Skipping neighbor.`,
+              );
+              return null;
+            }
 
-                  // Si el portId es una MAC (formateada por formatValue), prioridad absoluta a la MAC
-                  if (/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/i.test(pId)) {
-                    if (ifMac === pId) return true;
-                  }
+            return {
+              deviceId: device.id,
+              interfaceId: interfaceId,
+              lldpRemChassisId: n.lldpRemChassisId,
+              lldpRemPortIdSubtype: n.lldpRemPortIdSubtype,
+              lldpRemPortId: n.lldpRemPortId,
+              lldpRemSysName: n.lldpRemSysName,
+              remoteDeviceId,
+              remoteInterfaceId,
+            };
+          })
+          .filter((v): v is NonNullable<typeof v> => v !== null);
 
-                  // Si no, buscamos por Nombre, Descripción o Índice
-                  return (
-                    i.ifName?.toUpperCase() === pId ||
-                    i.ifDescr?.toUpperCase() === pId ||
-                    String(i.ifIndex) === pId
-                  );
-                });
-                if (found) remoteInterfaceId = found.id;
-              }
+        // --- DEDUPLICACIÓN POR INTERFACE_ID ---
+        // PostgreSQL no permite múltiples filas para el mismo target de conflicto en un solo INSERT.
+        const deduplicatedMap = new Map<number, (typeof valuesToInsert)[0]>();
+        for (const val of valuesToInsert) {
+          const existing = deduplicatedMap.get(val.interfaceId);
+          // Si no existe, o si el nuevo tiene remoteDeviceId y el viejo no, lo reemplazamos
+          if (!existing || (val.remoteDeviceId && !existing.remoteDeviceId)) {
+            deduplicatedMap.set(val.interfaceId, val);
+          }
+        }
+        const finalValues = Array.from(deduplicatedMap.values());
 
-              return {
-                deviceId: device.id,
-                interfaceId: ifIndexMap.get(n.localPortNum) || null,
-                localPortNum: n.localPortNum,
-                neighborIndex: n.neighborIndex,
-                chassisIdSubtype: n.lldpRemChassisIdSubtype,
-                chassisId: n.lldpRemChassisId,
-                portIdSubtype: n.lldpRemPortIdSubtype,
-                portId: n.lldpRemPortId,
-                portDesc: n.lldpRemPortDesc,
-                sysName: n.lldpRemSysName,
-                sysDesc: n.lldpRemSysDesc,
-                sysCapSupported: n.lldpRemSysCapSupported,
-                sysCapEnabled: n.lldpRemSysCapEnabled,
-                mgmtAddress: n.mgmtAddress,
-                remoteDeviceId,
-                remoteInterfaceId,
-              };
-            }),
-          )
-          .onConflictDoUpdate({
-            target: [
-              lldpNeighborTable.deviceId,
-              lldpNeighborTable.localPortNum,
-              lldpNeighborTable.neighborIndex,
-            ],
-            set: {
-              interfaceId: sql`EXCLUDED.interface_id`,
-              chassisIdSubtype: sql`EXCLUDED.chassis_id_subtype`,
-              chassisId: sql`EXCLUDED.chassis_id`,
-              portIdSubtype: sql`EXCLUDED.port_id_subtype`,
-              portId: sql`EXCLUDED.port_id`,
-              portDesc: sql`EXCLUDED.port_desc`,
-              sysName: sql`EXCLUDED.sys_name`,
-              sysDesc: sql`EXCLUDED.sys_desc`,
-              sysCapSupported: sql`EXCLUDED.sys_cap_supported`,
-              sysCapEnabled: sql`EXCLUDED.sys_cap_enabled`,
-              mgmtAddress: sql`EXCLUDED.mgmt_address`,
-              remoteDeviceId: sql`EXCLUDED.remote_device_id`,
-              remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
-              updatedAt: new Date(),
-            },
-          });
         console.log(
-          `[LLDP Poll] ${device.ipv4}: Success (${neighborEntries.length} neighbors)`,
+          `[LLDP Poll] ${device.ipv4}: Ready to insert ${finalValues.length} unique neighbors after deduplication`,
         );
+
+        if (finalValues.length === 0) return;
+
+        try {
+          await db
+            .insert(lldpNeighborTable)
+            .values(finalValues)
+            .onConflictDoUpdate({
+              target: [
+                lldpNeighborTable.deviceId,
+                lldpNeighborTable.interfaceId,
+              ],
+              set: {
+                lldpRemChassisId: sql`EXCLUDED.lldp_rem_chassis_id`,
+                lldpRemPortIdSubtype: sql`EXCLUDED.lldp_rem_port_id_subtype`,
+                lldpRemPortId: sql`EXCLUDED.lldp_rem_port_id`,
+                lldpRemSysName: sql`EXCLUDED.lldp_rem_sys_name`,
+                remoteDeviceId: sql`EXCLUDED.remote_device_id`,
+                remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
+                updatedAt: new Date(),
+              },
+            });
+          console.log(
+            `[LLDP Poll] ${device.ipv4}: Successfully saved ${finalValues.length} neighbors`,
+          );
+        } catch (dbError) {
+          console.error(
+            `[LLDP Poll] ${device.ipv4}: Error during database insertion:`,
+            dbError,
+          );
+        }
       }
+      console.log(
+        `[LLDP Poll] ${device.ipv4}: Success (${neighborEntries.length} neighbors)`,
+      );
     } catch (error) {
       console.error(`[LLDP Poll] Error ${device.ipv4}:`, error);
     }

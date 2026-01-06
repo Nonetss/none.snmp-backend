@@ -25,45 +25,26 @@ export const lldpNeighborTable = pgTable(
 
     // Relación con la interfaz local del dispositivo polleado.
     // Ayuda a saber qué puerto físico/lógico tiene la conexión.
-    interfaceId: integer('interface_id').references(() => interfaceTable.id),
+    interfaceId: integer('interface_id')
+      .references(() => interfaceTable.id)
+      .notNull(),
 
-    // Índices del MIB
-    localPortNum: integer('local_port_num').notNull(), // lldpRemLocalPortNum
-    neighborIndex: integer('neighbor_index').notNull(), // lldpRemIndex
+    // Informacion del vecino
+    lldpRemChassisId: varchar('lldp_rem_chassis_id', { length: 255 }), // MAC del puerto vecido o dispositivo vecino
+    lldpRemPortIdSubtype: integer('lldp_rem_port_id_subtype'), // Subtipo del puerto del vecino
+    lldpRemPortId: varchar('lldp_rem_port_id', { length: 255 }), // Nombre del puerto del vecino
+    lldpRemSysName: varchar('lldp_rem_sys_name', { length: 255 }), // Nombre del dispositivo vecino
 
-    // Identidad del Sistema Remoto (Neighbor)
-    chassisIdSubtype: integer('chassis_id_subtype'), // LldpChassisIdSubtype (4=mac, 5=network...)
-    chassisId: varchar('chassis_id', { length: 255 }), // ID del chasis remoto
-
-    portIdSubtype: integer('port_id_subtype'), // LldpPortIdSubtype (5=ifName, 7=local...)
-    portId: varchar('port_id', { length: 255 }), // ID del puerto remoto
-    portDesc: varchar('port_desc', { length: 255 }), // Descripción del puerto remoto
-
-    sysName: varchar('sys_name', { length: 255 }), // Nombre del sistema remoto
-    sysDesc: varchar('sys_desc', { length: 1024 }), // Descripción del sistema remoto
-
-    sysCapSupported: varchar('sys_cap_supported', { length: 100 }), // Capacidades soportadas (bits)
-    sysCapEnabled: varchar('sys_cap_enabled', { length: 100 }), // Capacidades habilitadas (bits)
-
-    // Dirección de gestión remota (útil para identificar al vecino si es un dispositivo conocido)
-    mgmtAddress: varchar('mgmt_address', { length: 100 }),
-
-    // --- Resolución de Topología (Cálculo posterior) ---
-    // Estos campos permiten navegar el grafo directamente entre registros de nuestra DB.
     remoteDeviceId: integer('remote_device_id').references(
       () => deviceTable.id,
-    ),
+    ), // Puede ser nulo porque el dispositivo puede salir y no estar en el snmp
     remoteInterfaceId: integer('remote_interface_id').references(
       () => interfaceTable.id,
-    ),
+    ), // Puede ser nulo porque el puerto puede salir y no estar en el snmp
 
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (t) => [
-    uniqueIndex('lldp_neighbor_device_port_idx').on(
-      t.deviceId,
-      t.localPortNum,
-      t.neighborIndex,
-    ),
+    uniqueIndex('lldp_neighbor_device_port_idx').on(t.deviceId, t.interfaceId),
   ],
 );

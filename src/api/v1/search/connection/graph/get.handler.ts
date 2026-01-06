@@ -83,23 +83,28 @@ export const getConnectionGraphHandler: Handler = async (c) => {
   for (const n of allLldp) {
     const sourceDev = deviceIdMap.get(n.deviceId)!;
     const sourceIface = (deviceInterfacesMap.get(n.deviceId) || []).find(
-      (i) => i.id === n.interfaceId || i.ifIndex === n.localPortNum,
+      (i) => i.id === n.interfaceId,
     );
     let remoteDev = n.remoteDeviceId ? deviceIdMap.get(n.remoteDeviceId) : null;
 
     if (!remoteDev) {
-      if (n.mgmtAddress && deviceIpMap.has(n.mgmtAddress))
-        remoteDev = deviceIpMap.get(n.mgmtAddress);
-      else if (n.chassisId && macToDeviceMap.has(n.chassisId.toUpperCase()))
+      if (
+        n.lldpRemChassisId &&
+        macToDeviceMap.has(n.lldpRemChassisId.toUpperCase())
+      )
         remoteDev = deviceIdMap.get(
-          macToDeviceMap.get(n.chassisId.toUpperCase())!,
+          macToDeviceMap.get(n.lldpRemChassisId.toUpperCase())!,
         );
-      else if (n.portId && macToDeviceMap.has(n.portId.toUpperCase()))
+      else if (
+        n.lldpRemPortId &&
+        macToDeviceMap.has(n.lldpRemPortId.toUpperCase())
+      )
         remoteDev = deviceIdMap.get(
-          macToDeviceMap.get(n.portId.toUpperCase())!,
+          macToDeviceMap.get(n.lldpRemPortId.toUpperCase())!,
         );
       else {
-        const nameToTry = cleanName(n.sysName) || cleanName(n.chassisId);
+        const nameToTry =
+          cleanName(n.lldpRemSysName) || cleanName(n.lldpRemChassisId);
         const match = allDevices.find(
           (d) =>
             cleanName(d.name) === nameToTry ||
@@ -113,12 +118,12 @@ export const getConnectionGraphHandler: Handler = async (c) => {
       sourceDev,
       sourceIface,
       remoteDev,
-      n.chassisId,
-      n.sysName,
-      n.mgmtAddress,
-      n.portId,
+      n.lldpRemChassisId,
+      n.lldpRemSysName,
+      null, // mgmtAddress removed
+      n.lldpRemPortId,
       'lldp',
-      n.localPortNum,
+      sourceIface?.ifIndex || 0,
       n.id,
     );
   }
