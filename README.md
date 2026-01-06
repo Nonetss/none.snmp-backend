@@ -1,97 +1,92 @@
-# Hono + OpenAPI + Drizzle Template
+# NONE.SNMP Backend
 
-Este proyecto es una plantilla robusta y moderna para construir APIs utilizando **Hono**, **OpenAPI**, y **Drizzle ORM**. Está diseñado para ser rápido, tipado y fácil de documentar.
+Un potente motor de descubrimiento y gestión de red basado en **SNMP**, diseñado para proporcionar visibilidad completa sobre la topología y el inventario de dispositivos en tiempo real.
 
-## 🚀 Características
+## 🚀 Características Principales
 
-- **[Hono](https://hono.dev/)**: Framework web ultrarrápido.
-- **[OpenAPI](https://github.com/honojs/middleware/tree/main/packages/zod-openapi)**: Especificación de API integrada con `@hono/zod-openapi`.
-- **[Drizzle ORM](https://orm.drizzle.team/)**: ORM ligero y seguro para TypeScript.
-- **[Scalar](https://scalar.com/)**: Documentación de API interactiva y hermosa.
-- **[Zod](https://zod.dev/)**: Validación de esquemas TypeScript-first.
-- **[Bun](https://bun.sh/)**: Runtime de JavaScript todo en uno.
+- **Descubrimiento Inteligente:** Escaneo de subredes mediante ICMP y validación automática de credenciales SNMP (v1, v2c, v3).
+- **Topología de Red:** Generación de grafos de conexión cruzando datos de **LLDP**, **CDP**, y tablas de reenvío (**FDB/Bridge**).
+- **Inventario Detallado:** Recolección profunda de:
+  - Información de sistema (Nombre, descripción, ubicación, uptime).
+  - Interfaces de red (Estado, velocidad, tráfico, direcciones físicas).
+  - Software instalado y procesos en ejecución (con métricas de CPU/Memoria).
+  - Tablas de enrutamiento y direccionamiento IP.
+  - Entidades físicas (Chasis, módulos, números de serie).
+- **Programador de Tareas (Scheduler):** Automatización de escaneos y recolección de datos mediante expresiones Cron.
+- **Búsqueda Avanzada:** Localización de dispositivos por IP/MAC y búsqueda "fuzzy" de aplicaciones o servicios en toda la red.
+- **Documentación Nativa:** API totalmente documentada con **OpenAPI** y **Scalar**.
 
-## 🛠️ Requisitos Previos
+## 🛠️ Stack Tecnológico
 
-Asegúrate de tener instalado [Bun](https://bun.sh/).
+- **Runtime:** [Bun](https://bun.sh/)
+- **Framework:** [Hono](https://hono.dev/) con `@hono/zod-openapi`
+- **ORM:** [Drizzle ORM](https://orm.drizzle.team/)
+- **Base de Datos:** PostgreSQL
+- **Protocolos:** ICMP, SNMP (net-snmp)
 
-```bash
-curl -fsSL https://bun.sh/install | bash
+## 📁 Estructura del Proyecto
+
+El proyecto sigue una arquitectura orientada a recursos y acciones:
+
+```text
+src/
+├── api/v1/
+│   ├── search/         # Endpoints de consulta (Datos, Grafo, Inventario)
+│   └── snmp/           # Endpoints de acción (Scan, Poll, Auth, Scheduler)
+├── core/               # Configuración global y servicios de fondo (Scheduler)
+├── db/                 # Esquemas de base de datos y migraciones
+├── lib/                # Lógica de bajo nivel (SNMP, ICMP, IP Utils)
+└── OID/                # Definiciones JSON de MIBs y OIDs estándar
 ```
-
-## 📦 Instalación
-
-1. Clona el repositorio (o usa esta plantilla):
-
-   ```bash
-   git clone <tu-repo-url>
-   cd <nombre-del-proyecto>
-   ```
-
-2. Instala las dependencias:
-   ```bash
-   bun install
-   ```
 
 ## ⚙️ Configuración
 
-1. Copia el archivo de ejemplo de variables de entorno:
+1.  **Instalar dependencias:**
 
-   ```bash
-   cp .env.example .env
-   ```
+    ```bash
+    bun install
+    ```
 
-2. Configura tu conexión a la base de datos en el archivo `.env`:
-   ```env
-   DATABASE_URL="postgresql://usuario:password@localhost:5432/nombre_db"
-   ```
+2.  **Variables de Entorno:**
+    Crea un archivo `.env` basado en `.env.example`:
 
-## ▶️ Ejecución
+    ```env
+    DATABASE_URL="postgresql://user:password@localhost:5432/snmp_db"
+    ```
 
-Para iniciar el servidor de desarrollo con recarga en caliente (hot reload):
+3.  **Base de Datos:**
+    Generar y ejecutar las migraciones:
+    ```bash
+    bunx drizzle-kit generate
+    ```
+    ```bash
+    bunx drizzle-kit migrate
+    ```
+
+## 🚀 Ejecución
+
+Para iniciar el servidor en modo desarrollo:
 
 ```bash
-bun run dev
+bun dev
 ```
 
-El servidor se iniciará en `http://localhost:3000`.
+El backend estará disponible en `http://localhost:3000`.
 
-## 📚 Documentación de la API
+### Documentación de la API
 
-Una vez que el servidor esté corriendo, puedes acceder a la documentación interactiva de la API:
+- **Interactivo (Scalar):** [http://localhost:3000/scalar](http://localhost:3000/scalar)
+- **JSON OpenAPI:** [http://localhost:3000/doc](http://localhost:3000/doc)
 
-- **Scalar UI**: [http://localhost:3000/scalar](http://localhost:3000/scalar)
-- **JSON Spec**: [http://localhost:3000/doc](http://localhost:3000/doc)
+## ⏰ Automatización (Scheduler)
 
-## 🗄️ Base de Datos (Drizzle)
+Puedes programar tareas automáticas a través de la API (`/api/v1/snmp/scheduler`).
+Soportamos expresiones Cron estándar de 5 campos:
 
-Este proyecto utiliza Drizzle Kit para la gestión de migraciones.
+- `SCAN_ALL_SUBNETS`: Re-escanea todas las redes registradas.
+- `POLL_ALL`: Actualiza los datos de todos los dispositivos conocidos.
+- `SCAN_SUBNET`: Escanea un rango específico (requiere `targetId`).
 
-- **Generar migraciones**:
+---
 
-  ```bash
-  bunx drizzle-kit generate
-  ```
-
-- **Ejecutar migraciones**:
-
-  ```bash
-  bunx drizzle-kit migrate
-  ```
-
-- **Drizzle Studio** (Interfaz visual para la DB):
-  ```bash
-  bunx drizzle-kit studio
-  ```
-
-## 📂 Estructura del Proyecto
-
-```
-src/
-├── core/           # Configuraciones del núcleo
-├── db/             # Configuración de Drizzle y esquemas
-│   ├── models/     # Definición de tablas/modelos
-│   └── index.ts    # Punto de entrada de la DB
-├── index.ts        # Punto de entrada de la aplicación Hono
-└── ...
-```
+Desarrollado con ❤️ para la gestión moderna de infraestructuras de red.
