@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     iputils-ping \
+    snmp \
     && rm -rf /var/lib/apt/lists/*
 
 # Run the app
