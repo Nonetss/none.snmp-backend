@@ -125,6 +125,7 @@ export const getConnectionGraphHandler: Handler = async (c) => {
       'lldp',
       sourceIface?.ifIndex || 0,
       n.id,
+      n.remoteInterfaceId,
     );
   }
 
@@ -162,6 +163,7 @@ export const getConnectionGraphHandler: Handler = async (c) => {
       'cdp',
       n.ifIndex,
       n.id,
+      n.remoteInterfaceId,
     );
   }
 
@@ -274,6 +276,7 @@ export const getConnectionGraphHandler: Handler = async (c) => {
     protocol: string,
     localIndex: number,
     dbId: number,
+    remoteInterfaceId?: number | null,
   ) {
     const sourceNodeId = `dev-${sourceDev.id}`;
     if (!nodesMap.has(sourceNodeId))
@@ -325,13 +328,23 @@ export const getConnectionGraphHandler: Handler = async (c) => {
       : { ifIndex: localIndex, label: `Port ${localIndex}` };
 
     let targetInterfaceInfo: any = { label: portId || 'Unknown' };
-    if (remoteDev && portId) {
-      const found = (deviceInterfacesMap.get(remoteDev.id) || []).find(
-        (i) =>
-          i.ifPhysAddress?.toUpperCase() === portId.toUpperCase() ||
-          i.ifName?.toUpperCase() === portId.toUpperCase() ||
-          String(i.ifIndex) === portId,
-      );
+    if (remoteDev) {
+      let found = null;
+      if (remoteInterfaceId) {
+        found = (deviceInterfacesMap.get(remoteDev.id) || []).find(
+          (i) => i.id === remoteInterfaceId,
+        );
+      }
+
+      if (!found && portId) {
+        found = (deviceInterfacesMap.get(remoteDev.id) || []).find(
+          (i) =>
+            i.ifPhysAddress?.toUpperCase() === portId.toUpperCase() ||
+            i.ifName?.toUpperCase() === portId.toUpperCase() ||
+            String(i.ifIndex) === portId,
+        );
+      }
+
       if (found) {
         targetInterfaceInfo = {
           ifIndex: found.ifIndex,
