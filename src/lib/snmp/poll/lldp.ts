@@ -8,6 +8,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { chunkArray } from '@/lib/db';
 
 const LLDP_METRICS = [
   'lldpRemChassisIdSubtype',
@@ -316,24 +317,26 @@ export async function pollLldp(deviceId?: number) {
         if (finalValues.length === 0) return;
 
         try {
-          await db
-            .insert(lldpNeighborTable)
-            .values(finalValues)
-            .onConflictDoUpdate({
-              target: [
-                lldpNeighborTable.deviceId,
-                lldpNeighborTable.interfaceId,
-              ],
-              set: {
-                lldpRemChassisId: sql`EXCLUDED.lldp_rem_chassis_id`,
-                lldpRemPortIdSubtype: sql`EXCLUDED.lldp_rem_port_id_subtype`,
-                lldpRemPortId: sql`EXCLUDED.lldp_rem_port_id`,
-                lldpRemSysName: sql`EXCLUDED.lldp_rem_sys_name`,
-                remoteDeviceId: sql`EXCLUDED.remote_device_id`,
-                remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
-                updatedAt: new Date(),
-              },
-            });
+          for (const chunk of chunkArray(finalValues, 1000)) {
+            await db
+              .insert(lldpNeighborTable)
+              .values(chunk)
+              .onConflictDoUpdate({
+                target: [
+                  lldpNeighborTable.deviceId,
+                  lldpNeighborTable.interfaceId,
+                ],
+                set: {
+                  lldpRemChassisId: sql`EXCLUDED.lldp_rem_chassis_id`,
+                  lldpRemPortIdSubtype: sql`EXCLUDED.lldp_rem_port_id_subtype`,
+                  lldpRemPortId: sql`EXCLUDED.lldp_rem_port_id`,
+                  lldpRemSysName: sql`EXCLUDED.lldp_rem_sys_name`,
+                  remoteDeviceId: sql`EXCLUDED.remote_device_id`,
+                  remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
+                  updatedAt: new Date(),
+                },
+              });
+          }
           console.log(
             `[LLDP Poll] ${device.ipv4}: Successfully saved ${finalValues.length} neighbors`,
           );

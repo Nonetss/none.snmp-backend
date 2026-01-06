@@ -11,6 +11,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, getSNMP, sanitizeString } from '@/lib/snmp';
+import { chunkArray } from '@/lib/db';
 
 const BASE_METRICS = [
   'dot1dBaseBridgeAddress',
@@ -153,32 +154,31 @@ export async function pollBridge(deviceId?: number) {
 
         const portEntriesRaw = Array.from(portsMap.values());
         if (portEntriesRaw.length > 0) {
-          // De-duplicar por bridgePort (ya debería estarlo por el Map, pero aseguramos)
           const uniquePortsMap = new Map<number, any>();
           portEntriesRaw.forEach((p) => uniquePortsMap.set(p.bridgePort, p));
 
-          const portEntries = Array.from(uniquePortsMap.values());
+          const portEntries = Array.from(uniquePortsMap.values()).map((p) => ({
+            deviceId: device.id,
+            bridgePort: p.bridgePort,
+            ifIndex: p.dot1dBasePortIfIndex
+              ? Number(p.dot1dBasePortIfIndex)
+              : null,
+            pvid: p.dot1qPvid ? Number(p.dot1qPvid) : null,
+          }));
 
-          await db
-            .insert(bridgePortTable)
-            .values(
-              portEntries.map((p) => ({
-                deviceId: device.id,
-                bridgePort: p.bridgePort,
-                ifIndex: p.dot1dBasePortIfIndex
-                  ? Number(p.dot1dBasePortIfIndex)
-                  : null,
-                pvid: p.dot1qPvid ? Number(p.dot1qPvid) : null,
-              })),
-            )
-            .onConflictDoUpdate({
-              target: [bridgePortTable.deviceId, bridgePortTable.bridgePort],
-              set: {
-                ifIndex: sql`EXCLUDED.if_index`,
-                pvid: sql`EXCLUDED.pvid`,
-                updatedAt: new Date(),
-              },
-            });
+          for (const chunk of chunkArray(portEntries, 1000)) {
+            await db
+              .insert(bridgePortTable)
+              .values(chunk)
+              .onConflictDoUpdate({
+                target: [bridgePortTable.deviceId, bridgePortTable.bridgePort],
+                set: {
+                  ifIndex: sql`EXCLUDED.if_index`,
+                  pvid: sql`EXCLUDED.pvid`,
+                  updatedAt: new Date(),
+                },
+              });
+          }
         }
       }
 
@@ -217,32 +217,31 @@ export async function pollBridge(deviceId?: number) {
 
         const vlanEntriesRaw = Array.from(vlansMap.values());
         if (vlanEntriesRaw.length > 0) {
-          // De-duplicar por vlanId
           const uniqueVlansMap = new Map<number, any>();
           vlanEntriesRaw.forEach((v) => uniqueVlansMap.set(v.vlanId, v));
 
-          const vlanEntries = Array.from(uniqueVlansMap.values());
+          const vlanEntries = Array.from(uniqueVlansMap.values()).map((v) => ({
+            deviceId: device.id,
+            vlanId: v.vlanId,
+            name: v.dot1qVlanStaticName,
+            egressPorts: v.dot1qVlanStaticEgressPorts,
+            untaggedPorts: v.dot1qVlanStaticUntaggedPorts,
+          }));
 
-          await db
-            .insert(vlanTable)
-            .values(
-              vlanEntries.map((v) => ({
-                deviceId: device.id,
-                vlanId: v.vlanId,
-                name: v.dot1qVlanStaticName,
-                egressPorts: v.dot1qVlanStaticEgressPorts,
-                untaggedPorts: v.dot1qVlanStaticUntaggedPorts,
-              })),
-            )
-            .onConflictDoUpdate({
-              target: [vlanTable.deviceId, vlanTable.vlanId],
-              set: {
-                name: sql`EXCLUDED.name`,
-                egressPorts: sql`EXCLUDED.egress_ports`,
-                untaggedPorts: sql`EXCLUDED.untagged_ports`,
-                updatedAt: new Date(),
-              },
-            });
+          for (const chunk of chunkArray(vlanEntries, 1000)) {
+            await db
+              .insert(vlanTable)
+              .values(chunk)
+              .onConflictDoUpdate({
+                target: [vlanTable.deviceId, vlanTable.vlanId],
+                set: {
+                  name: sql`EXCLUDED.name`,
+                  egressPorts: sql`EXCLUDED.egress_ports`,
+                  untaggedPorts: sql`EXCLUDED.untagged_ports`,
+                  updatedAt: new Date(),
+                },
+              });
+          }
         }
       }
 
@@ -277,30 +276,29 @@ export async function pollBridge(deviceId?: number) {
 
         const fdbEntriesRaw = Array.from(fdbMap.values());
         if (fdbEntriesRaw.length > 0) {
-          // De-duplicar por address
           const uniqueFdbMap = new Map<string, any>();
           fdbEntriesRaw.forEach((f) => uniqueFdbMap.set(f.address, f));
 
-          const fdbEntries = Array.from(uniqueFdbMap.values());
+          const fdbEntries = Array.from(uniqueFdbMap.values()).map((f) => ({
+            deviceId: device.id,
+            address: f.address,
+            port: Number(f.dot1dTpFdbPort),
+            status: Number(f.dot1dTpFdbStatus),
+          }));
 
-          await db
-            .insert(bridgeFdbTable)
-            .values(
-              fdbEntries.map((f) => ({
-                deviceId: device.id,
-                address: f.address,
-                port: Number(f.dot1dTpFdbPort),
-                status: Number(f.dot1dTpFdbStatus),
-              })),
-            )
-            .onConflictDoUpdate({
-              target: [bridgeFdbTable.deviceId, bridgeFdbTable.address],
-              set: {
-                port: sql`EXCLUDED.port`,
-                status: sql`EXCLUDED.status`,
-                updatedAt: new Date(),
-              },
-            });
+          for (const chunk of chunkArray(fdbEntries, 1000)) {
+            await db
+              .insert(bridgeFdbTable)
+              .values(chunk)
+              .onConflictDoUpdate({
+                target: [bridgeFdbTable.deviceId, bridgeFdbTable.address],
+                set: {
+                  port: sql`EXCLUDED.port`,
+                  status: sql`EXCLUDED.status`,
+                  updatedAt: new Date(),
+                },
+              });
+          }
         }
       }
 
@@ -342,37 +340,36 @@ export async function pollBridge(deviceId?: number) {
 
         const fdbQEntriesRaw = Array.from(fdbQMap.values());
         if (fdbQEntriesRaw.length > 0) {
-          // De-duplicar por (vlanId, address)
           const uniqueFdbQMap = new Map<string, any>();
           fdbQEntriesRaw.forEach((f) =>
             uniqueFdbQMap.set(`${f.vlanId}_${f.address}`, f),
           );
 
-          const fdbQEntries = Array.from(uniqueFdbQMap.values());
+          const fdbQEntries = Array.from(uniqueFdbQMap.values()).map((f) => ({
+            deviceId: device.id,
+            vlanId: f.vlanId,
+            address: f.address,
+            port: Number(f.dot1qTpFdbPort),
+            status: Number(f.dot1qTpFdbStatus),
+          }));
 
-          await db
-            .insert(bridgeFdbQTable)
-            .values(
-              fdbQEntries.map((f) => ({
-                deviceId: device.id,
-                vlanId: f.vlanId,
-                address: f.address,
-                port: Number(f.dot1qTpFdbPort),
-                status: Number(f.dot1qTpFdbStatus),
-              })),
-            )
-            .onConflictDoUpdate({
-              target: [
-                bridgeFdbQTable.deviceId,
-                bridgeFdbQTable.vlanId,
-                bridgeFdbQTable.address,
-              ],
-              set: {
-                port: sql`EXCLUDED.port`,
-                status: sql`EXCLUDED.status`,
-                updatedAt: new Date(),
-              },
-            });
+          for (const chunk of chunkArray(fdbQEntries, 1000)) {
+            await db
+              .insert(bridgeFdbQTable)
+              .values(chunk)
+              .onConflictDoUpdate({
+                target: [
+                  bridgeFdbQTable.deviceId,
+                  bridgeFdbQTable.vlanId,
+                  bridgeFdbQTable.address,
+                ],
+                set: {
+                  port: sql`EXCLUDED.port`,
+                  status: sql`EXCLUDED.status`,
+                  updatedAt: new Date(),
+                },
+              });
+          }
         }
       }
 

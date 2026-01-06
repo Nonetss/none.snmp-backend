@@ -10,6 +10,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql, and } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { chunkArray } from '@/lib/db';
 
 const TARGET_COLUMNS = [
   'hrSWRunIndex',
@@ -202,7 +203,10 @@ export async function pollResources(deviceId?: number) {
           hrSWRunType: Number(p.hrSWRunType) || 0,
           hrSWRunStatus: Number(p.hrSWRunStatus) || 0,
         }));
-        await db.insert(hrSWRunEntryTable).values(runEntries);
+
+        for (const chunk of chunkArray(runEntries, 1000)) {
+          await db.insert(hrSWRunEntryTable).values(chunk);
+        }
 
         const perfEntries = runList
           .filter(
@@ -216,8 +220,12 @@ export async function pollResources(deviceId?: number) {
             hrSWRunPerfCPU: Number(p.hrSWRunPerfCPU) || 0,
             hrSWRunPerfMem: Number(p.hrSWRunPerfMem) || 0,
           }));
-        if (perfEntries.length > 0)
-          await db.insert(hrSWRunPerfEntryTable).values(perfEntries);
+
+        if (perfEntries.length > 0) {
+          for (const chunk of chunkArray(perfEntries, 1000)) {
+            await db.insert(hrSWRunPerfEntryTable).values(chunk);
+          }
+        }
       }
 
       if (installedList.length > 0) {
@@ -237,28 +245,29 @@ export async function pollResources(deviceId?: number) {
                 ? p.hrSWInstalledDate
                 : new Date(),
           };
-          // Si hay duplicados por nombre, el último prevalece (evita error ON CONFLICT en la misma query)
           uniqueInstalledMap.set(name, entry);
         });
 
         const installedEntries = Array.from(uniqueInstalledMap.values());
 
-        await db
-          .insert(hrSWInstalledEntryTable)
-          .values(installedEntries)
-          .onConflictDoUpdate({
-            target: [
-              hrSWInstalledEntryTable.resourceId,
-              hrSWInstalledEntryTable.hrSWInstalledName,
-            ],
-            set: {
-              hrSWInstalledIndex: sql.raw('EXCLUDED.hr_sw_installed_index'),
-              hrSWInstalledID: sql.raw('EXCLUDED.hr_sw_installed_id'),
-              hrSWInstalledType: sql.raw('EXCLUDED.hr_sw_installed_type'),
-              hrSWInstalledDate: sql.raw('EXCLUDED.hr_sw_installed_date'),
-              date: new Date(),
-            },
-          });
+        for (const chunk of chunkArray(installedEntries, 1000)) {
+          await db
+            .insert(hrSWInstalledEntryTable)
+            .values(chunk)
+            .onConflictDoUpdate({
+              target: [
+                hrSWInstalledEntryTable.resourceId,
+                hrSWInstalledEntryTable.hrSWInstalledName,
+              ],
+              set: {
+                hrSWInstalledIndex: sql.raw('EXCLUDED.hr_sw_installed_index'),
+                hrSWInstalledID: sql.raw('EXCLUDED.hr_sw_installed_id'),
+                hrSWInstalledType: sql.raw('EXCLUDED.hr_sw_installed_type'),
+                hrSWInstalledDate: sql.raw('EXCLUDED.hr_sw_installed_date'),
+                date: new Date(),
+              },
+            });
+        }
       }
 
       console.log(`[Resource Poll] ${device.ipv4}: Success`);

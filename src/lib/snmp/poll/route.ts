@@ -7,6 +7,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { chunkArray } from '@/lib/db';
 
 const ROUTE_METRICS = [
   'ipCidrRouteDest',
@@ -127,35 +128,39 @@ export async function pollRoutes(deviceId?: number) {
           uniqueRoutesMap.set(key, r);
         });
 
-        const routeEntries = Array.from(uniqueRoutesMap.values());
+        const routeEntries = Array.from(uniqueRoutesMap.values()).map((r) => ({
+          deviceId: device.id,
+          dest: r.ipCidrRouteDest || '',
+          mask: r.ipCidrRouteMask,
+          nextHop: r.ipCidrRouteNextHop || '',
+          ifIndex: r.ipCidrRouteIfIndex,
+          type: r.ipCidrRouteType,
+          proto: r.ipCidrRouteProto,
+          age: r.ipCidrRouteAge,
+          metric1: r.ipCidrRouteMetric1,
+        }));
 
-        await db
-          .insert(routeTable)
-          .values(
-            routeEntries.map((r) => ({
-              deviceId: device.id,
-              dest: r.ipCidrRouteDest || '',
-              mask: r.ipCidrRouteMask,
-              nextHop: r.ipCidrRouteNextHop || '',
-              ifIndex: r.ipCidrRouteIfIndex,
-              type: r.ipCidrRouteType,
-              proto: r.ipCidrRouteProto,
-              age: r.ipCidrRouteAge,
-              metric1: r.ipCidrRouteMetric1,
-            })),
-          )
-          .onConflictDoUpdate({
-            target: [routeTable.deviceId, routeTable.dest, routeTable.nextHop],
-            set: {
-              mask: sql`EXCLUDED.mask`,
-              ifIndex: sql`EXCLUDED.if_index`,
-              type: sql`EXCLUDED.type`,
-              proto: sql`EXCLUDED.proto`,
-              age: sql`EXCLUDED.age`,
-              metric1: sql`EXCLUDED.metric1`,
-              updatedAt: new Date(),
-            },
-          });
+        for (const chunk of chunkArray(routeEntries, 1000)) {
+          await db
+            .insert(routeTable)
+            .values(chunk)
+            .onConflictDoUpdate({
+              target: [
+                routeTable.deviceId,
+                routeTable.dest,
+                routeTable.nextHop,
+              ],
+              set: {
+                mask: sql`EXCLUDED.mask`,
+                ifIndex: sql`EXCLUDED.if_index`,
+                type: sql`EXCLUDED.type`,
+                proto: sql`EXCLUDED.proto`,
+                age: sql`EXCLUDED.age`,
+                metric1: sql`EXCLUDED.metric1`,
+                updatedAt: new Date(),
+              },
+            });
+        }
         console.log(
           `[Route Poll] ${device.ipv4}: Success (${routeEntries.length} routes)`,
         );

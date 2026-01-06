@@ -8,6 +8,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { chunkArray } from '@/lib/db';
 
 // Columnas que esperamos recuperar
 const TARGET_COLUMNS = [
@@ -152,32 +153,34 @@ export async function pollInterfaces(deviceId?: number) {
       const interfacesList = Array.from(finalInterfacesMap.values());
 
       // Paso 1: Upsert Interfaces Estáticas
-      await db
-        .insert(interfaceTable)
-        .values(
-          interfacesList.map((iface: any) => ({
-            deviceId: device.id,
-            ifIndex: iface.ifIndex,
-            ifDescr: iface.ifDescr?.toString() || null,
-            ifName: iface.ifName?.toString() || null,
-            ifType: Number(iface.ifType) || null,
-            ifMtu: Number(iface.ifMtu) || null,
-            ifSpeed: iface.ifSpeed?.toString() || null,
-            ifPhysAddress: iface.ifPhysAddress?.toString() || null,
-          })),
-        )
-        .onConflictDoUpdate({
-          target: [interfaceTable.deviceId, interfaceTable.ifIndex],
-          set: {
-            ifDescr: sql`EXCLUDED.if_descr`,
-            ifName: sql`EXCLUDED.if_name`,
-            ifType: sql`EXCLUDED.if_type`,
-            ifMtu: sql`EXCLUDED.if_mtu`,
-            ifSpeed: sql`EXCLUDED.if_speed`,
-            ifPhysAddress: sql`EXCLUDED.if_phys_address`,
-            updatedAt: new Date(),
-          },
-        });
+      const staticEntries = interfacesList.map((iface: any) => ({
+        deviceId: device.id,
+        ifIndex: iface.ifIndex,
+        ifDescr: iface.ifDescr?.toString() || null,
+        ifName: iface.ifName?.toString() || null,
+        ifType: Number(iface.ifType) || null,
+        ifMtu: Number(iface.ifMtu) || null,
+        ifSpeed: iface.ifSpeed?.toString() || null,
+        ifPhysAddress: iface.ifPhysAddress?.toString() || null,
+      }));
+
+      for (const chunk of chunkArray(staticEntries, 1000)) {
+        await db
+          .insert(interfaceTable)
+          .values(chunk)
+          .onConflictDoUpdate({
+            target: [interfaceTable.deviceId, interfaceTable.ifIndex],
+            set: {
+              ifDescr: sql`EXCLUDED.if_descr`,
+              ifName: sql`EXCLUDED.if_name`,
+              ifType: sql`EXCLUDED.if_type`,
+              ifMtu: sql`EXCLUDED.if_mtu`,
+              ifSpeed: sql`EXCLUDED.if_speed`,
+              ifPhysAddress: sql`EXCLUDED.if_phys_address`,
+              updatedAt: new Date(),
+            },
+          });
+      }
 
       // Paso 2: Insertar Datos de Telemetría
       const dbInterfaces = await db
@@ -204,7 +207,9 @@ export async function pollInterfaces(deviceId?: number) {
         }));
 
       if (telemetryData.length > 0) {
-        await db.insert(interfaceDataTable).values(telemetryData);
+        for (const chunk of chunkArray(telemetryData, 1000)) {
+          await db.insert(interfaceDataTable).values(chunk);
+        }
       }
       console.log(
         `[Interface Poll] ${device.ipv4}: Success (${interfacesList.length} interfaces)`,

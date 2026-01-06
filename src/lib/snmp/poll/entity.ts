@@ -7,6 +7,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { chunkArray } from '@/lib/db';
 
 const ENTITY_METRICS = [
   'entPhysicalDescr',
@@ -140,55 +141,96 @@ export async function pollEntity(deviceId?: number) {
       const entityEntries = Array.from(entityMap.values());
 
       if (entityEntries.length > 0) {
-        await db
-          .insert(entityPhysicalTable)
-          .values(
-            entityEntries.map((e) => ({
-              deviceId: device.id,
-              physicalIndex: e.physicalIndex,
-              descr: e.entPhysicalDescr,
-              vendorType: e.entPhysicalVendorType,
-              containedIn: e.entPhysicalContainedIn,
-              class: e.entPhysicalClass,
-              parentRelPos: e.entPhysicalParentRelPos,
-              name: e.entPhysicalName,
-              hardwareRev: e.entPhysicalHardwareRev,
-              firmwareRev: e.entPhysicalFirmwareRev,
-              softwareRev: e.entPhysicalSoftwareRev,
-              serialNum: e.entPhysicalSerialNum,
-              mfgName: e.entPhysicalMfgName,
-              modelName: e.entPhysicalModelName,
-              alias: e.entPhysicalAlias,
-              assetId: e.entPhysicalAssetID,
-              isFru: e.entPhysicalIsFRU,
-              mfgDate: e.entPhysicalMfgDate,
-            })),
-          )
-          .onConflictDoUpdate({
-            target: [
-              entityPhysicalTable.deviceId,
-              entityPhysicalTable.physicalIndex,
-            ],
-            set: {
-              descr: sql`EXCLUDED.descr`,
-              vendorType: sql`EXCLUDED.vendor_type`,
-              containedIn: sql`EXCLUDED.contained_in`,
-              class: sql`EXCLUDED.class`,
-              parentRelPos: sql`EXCLUDED.parent_rel_pos`,
-              name: sql`EXCLUDED.name`,
-              hardwareRev: sql`EXCLUDED.hardware_rev`,
-              firmwareRev: sql`EXCLUDED.firmware_rev`,
-              softwareRev: sql`EXCLUDED.software_rev`,
-              serialNum: sql`EXCLUDED.serial_num`,
-              mfgName: sql`EXCLUDED.mfg_name`,
-              modelName: sql`EXCLUDED.model_name`,
-              alias: sql`EXCLUDED.alias`,
-              assetId: sql`EXCLUDED.asset_id`,
-              isFru: sql`EXCLUDED.is_fru`,
-              mfgDate: sql`EXCLUDED.mfg_date`,
-              updatedAt: new Date(),
-            },
-          });
+        const valuesToInsert = entityEntries.map((e) => ({
+          deviceId: device.id,
+
+          physicalIndex: e.physicalIndex,
+
+          descr: e.entPhysicalDescr,
+
+          vendorType: e.entPhysicalVendorType,
+
+          containedIn: e.entPhysicalContainedIn,
+
+          class: e.entPhysicalClass,
+
+          parentRelPos: e.entPhysicalParentRelPos,
+
+          name: e.entPhysicalName,
+
+          hardwareRev: e.entPhysicalHardwareRev,
+
+          firmwareRev: e.entPhysicalFirmwareRev,
+
+          softwareRev: e.entPhysicalSoftwareRev,
+
+          serialNum: e.entPhysicalSerialNum,
+
+          mfgName: e.entPhysicalMfgName,
+
+          modelName: e.entPhysicalModelName,
+
+          alias: e.entPhysicalAlias,
+
+          assetId: e.entPhysicalAssetID,
+
+          isFru: e.entPhysicalIsFRU,
+
+          mfgDate: e.entPhysicalMfgDate,
+        }));
+
+        for (const chunk of chunkArray(valuesToInsert, 1000)) {
+          await db
+
+            .insert(entityPhysicalTable)
+
+            .values(chunk)
+
+            .onConflictDoUpdate({
+              target: [
+                entityPhysicalTable.deviceId,
+
+                entityPhysicalTable.physicalIndex,
+              ],
+
+              set: {
+                descr: sql`EXCLUDED.descr`,
+
+                vendorType: sql`EXCLUDED.vendor_type`,
+
+                containedIn: sql`EXCLUDED.contained_in`,
+
+                class: sql`EXCLUDED.class`,
+
+                parentRelPos: sql`EXCLUDED.parent_rel_pos`,
+
+                name: sql`EXCLUDED.name`,
+
+                hardwareRev: sql`EXCLUDED.hardware_rev`,
+
+                firmwareRev: sql`EXCLUDED.firmware_rev`,
+
+                softwareRev: sql`EXCLUDED.software_rev`,
+
+                serialNum: sql`EXCLUDED.serial_num`,
+
+                mfgName: sql`EXCLUDED.mfg_name`,
+
+                modelName: sql`EXCLUDED.model_name`,
+
+                alias: sql`EXCLUDED.alias`,
+
+                assetId: sql`EXCLUDED.asset_id`,
+
+                isFru: sql`EXCLUDED.is_fru`,
+
+                mfgDate: sql`EXCLUDED.mfg_date`,
+
+                updatedAt: new Date(),
+              },
+            });
+        }
+
         console.log(
           `[Entity Poll] ${device.ipv4}: Success (${entityEntries.length} entities)`,
         );

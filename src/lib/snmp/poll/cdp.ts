@@ -8,6 +8,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { chunkArray } from '@/lib/db';
 
 const CDP_METRICS = [
   'cdpCacheAddress',
@@ -227,23 +228,28 @@ export async function pollCdp(deviceId?: number) {
         if (finalValues.length === 0) return;
 
         try {
-          await db
-            .insert(cdpNeighborTable)
-            .values(finalValues)
-            .onConflictDoUpdate({
-              target: [cdpNeighborTable.deviceId, cdpNeighborTable.interfaceId],
-              set: {
-                cdpCacheAddress: sql`EXCLUDED.cdp_cache_address`,
-                cdpCacheDeviceId: sql`EXCLUDED.cdp_cache_device_id`,
-                cdpCacheDevicePort: sql`EXCLUDED.cdp_cache_device_port`,
-                cdpCachePlatform: sql`EXCLUDED.cdp_cache_platform`,
-                cdpCacheCapabilities: sql`EXCLUDED.cdp_cache_capabilities`,
-                cdpCacheSysName: sql`EXCLUDED.cdp_cache_sys_name`,
-                remoteDeviceId: sql`EXCLUDED.remote_device_id`,
-                remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
-                updatedAt: new Date(),
-              },
-            });
+          for (const chunk of chunkArray(finalValues, 1000)) {
+            await db
+              .insert(cdpNeighborTable)
+              .values(chunk)
+              .onConflictDoUpdate({
+                target: [
+                  cdpNeighborTable.deviceId,
+                  cdpNeighborTable.interfaceId,
+                ],
+                set: {
+                  cdpCacheAddress: sql`EXCLUDED.cdp_cache_address`,
+                  cdpCacheDeviceId: sql`EXCLUDED.cdp_cache_device_id`,
+                  cdpCacheDevicePort: sql`EXCLUDED.cdp_cache_device_port`,
+                  cdpCachePlatform: sql`EXCLUDED.cdp_cache_platform`,
+                  cdpCacheCapabilities: sql`EXCLUDED.cdp_cache_capabilities`,
+                  cdpCacheSysName: sql`EXCLUDED.cdp_cache_sys_name`,
+                  remoteDeviceId: sql`EXCLUDED.remote_device_id`,
+                  remoteInterfaceId: sql`EXCLUDED.remote_interface_id`,
+                  updatedAt: new Date(),
+                },
+              });
+          }
           console.log(
             `[CDP Poll] ${device.ipv4}: Successfully saved ${finalValues.length} neighbors`,
           );

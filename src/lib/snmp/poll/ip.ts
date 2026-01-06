@@ -9,6 +9,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { chunkArray } from '@/lib/db';
 
 const TARGET_COLUMNS = [
   'ipAdEntAddr',
@@ -170,47 +171,50 @@ export async function pollIpSnmp(deviceId?: number) {
           ipAdEntReasmMaxSize: Number(row.ipAdEntReasmMaxSize) || 0,
         }));
 
-        await db
-          .insert(ipAddrEntryTable)
-          .values(entries)
-          .onConflictDoUpdate({
-            target: [ipAddrEntryTable.ipSnmpId, ipAddrEntryTable.ipAdEntAddr],
-            set: {
-              time: timestamp,
-              ipAdEntIfIndex: sql`EXCLUDED.ip_ad_ent_if_index`,
-              ipAdEntNetMask: sql`EXCLUDED.ip_ad_ent_net_mask`,
-              ipAdEntBcastAddr: sql`EXCLUDED.ip_ad_ent_bcast_addr`,
-              ipAdEntReasmMaxSize: sql`EXCLUDED.ip_ad_ent_reasm_max_size`,
-            },
-          });
+        for (const chunk of chunkArray(entries, 1000)) {
+          await db
+            .insert(ipAddrEntryTable)
+            .values(chunk)
+            .onConflictDoUpdate({
+              target: [ipAddrEntryTable.ipSnmpId, ipAddrEntryTable.ipAdEntAddr],
+              set: {
+                time: timestamp,
+                ipAdEntIfIndex: sql`EXCLUDED.ip_ad_ent_if_index`,
+                ipAdEntNetMask: sql`EXCLUDED.ip_ad_ent_net_mask`,
+                ipAdEntBcastAddr: sql`EXCLUDED.ip_ad_ent_bcast_addr`,
+                ipAdEntReasmMaxSize: sql`EXCLUDED.ip_ad_ent_reasm_max_size`,
+              },
+            });
+        }
       }
 
       if (netList.length > 0) {
         const entries = netList.map((row: any) => ({
           ipSnmpId: ipSnmpRecord.id,
           time: timestamp,
-          ipAdEntAddr: row.ipAdEntAddr || '', // No usado aquí pero por si acaso
           ipNetToMediaIfIndex: Number(row.ipNetToMediaIfIndex) || 0,
           ipNetToMediaPhysAddress: row.ipNetToMediaPhysAddress || '',
           ipNetToMediaNetAddress: row.ipNetToMediaNetAddress || '',
           ipNetToMediaType: Number(row.ipNetToMediaType) || 0,
         }));
 
-        await db
-          .insert(ipNetToMediaTable)
-          .values(entries.map(({ ipAdEntAddr, ...rest }) => rest))
-          .onConflictDoUpdate({
-            target: [
-              ipNetToMediaTable.ipSnmpId,
-              ipNetToMediaTable.ipNetToMediaIfIndex,
-              ipNetToMediaTable.ipNetToMediaNetAddress,
-            ],
-            set: {
-              time: timestamp,
-              ipNetToMediaPhysAddress: sql`EXCLUDED.ip_net_to_media_phys_address`,
-              ipNetToMediaType: sql`EXCLUDED.ip_net_to_media_type`,
-            },
-          });
+        for (const chunk of chunkArray(entries, 1000)) {
+          await db
+            .insert(ipNetToMediaTable)
+            .values(chunk)
+            .onConflictDoUpdate({
+              target: [
+                ipNetToMediaTable.ipSnmpId,
+                ipNetToMediaTable.ipNetToMediaIfIndex,
+                ipNetToMediaTable.ipNetToMediaNetAddress,
+              ],
+              set: {
+                time: timestamp,
+                ipNetToMediaPhysAddress: sql`EXCLUDED.ip_net_to_media_phys_address`,
+                ipNetToMediaType: sql`EXCLUDED.ip_net_to_media_type`,
+              },
+            });
+        }
       }
 
       console.log(`[IP Poll] ${device.ipv4}: Success`);
