@@ -1,10 +1,33 @@
 services:
-  app:
-    container_name: snmp-backend
-    image: gitea.sanjuandediosmalaga.es/casjd/snmp-backend:v0.2
+  backend:
+    container_name: none-snmp-backend
+    image: ghcr.io/nonetss/none-snmp-backend:v0.2
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@database:5432/${POSTGRES_DB:-postgres}
+    depends_on:
+      - database
+    command: ['bunx', 'drizzle', 'generate', '--migrate']
+
+  frontend:
+    container_name: none-snmp-frontend
+    image: ghcr.io/nonetss/none-snmp-frontend:v0.2
     restart: always
     ports:
-      - '3083:3000'
+      - '4321:4321'
+    depends_on:
+      - backend
+
+  database:
+    container_name: none-snmp-database
+    image: postgres:16
+    restart: always
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - NODE_ENV=production
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
