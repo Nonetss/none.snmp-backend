@@ -39,11 +39,19 @@ app.openapi(rootRoute, rootHandler);
 
 import apiRouter from '@/api';
 import { initScheduler } from '@/core/services/scheduler.service';
+import { seedMetrics } from '@/lib/snmp/seed';
 
 app.route('/api', apiRouter);
 
 // Initialize background scheduler
 initScheduler();
+
+// Initial database seeding
+seedMetrics()
+  .then((mibs) => console.log(`[Seed] Successfully seeded ${mibs.length} MIBs`))
+  .catch((err) =>
+    console.error('[Seed] Critical error seeding database:', err),
+  );
 
 app.get('/', (c) => {
   return c.text('Hello Hono!');
