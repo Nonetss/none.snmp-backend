@@ -1,16 +1,32 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import connectionRouter from '@/api/v1/search/connection/index';
 import deviceRouter from '@/api/v1/search/device/index';
-import resourceSearchRouter from '@/api/v1/search/resource/get.index';
-import serviceSearchRouter from '@/api/v1/search/service/get.index';
+import resourceRouter from '@/api/v1/search/resource/index';
+import serviceRouter from '@/api/v1/search/service/index';
+import systemRouter from '@/api/v1/search/system/index';
+import interfaceRouter from '@/api/v1/search/interface/index';
+import ipRouter from '@/api/v1/search/ip/index';
+import routeRouter from '@/api/v1/search/route/index';
+import cdpRouter from '@/api/v1/search/cdp/index';
+import lldpRouter from '@/api/v1/search/lldp/index';
+import entityRouter from '@/api/v1/search/entity/index';
+import bridgeRouter from '@/api/v1/search/bridge/index';
 import statsRouter from '@/api/v1/search/stats/index';
 
 const searchRouter = new OpenAPIHono();
 
 searchRouter.route('/stats', statsRouter);
+searchRouter.route('/system', systemRouter);
+searchRouter.route('/interface', interfaceRouter);
+searchRouter.route('/ip', ipRouter);
+searchRouter.route('/route', routeRouter);
+searchRouter.route('/cdp', cdpRouter);
+searchRouter.route('/lldp', lldpRouter);
+searchRouter.route('/entity', entityRouter);
+searchRouter.route('/bridge', bridgeRouter);
+searchRouter.route('/resource', resourceRouter);
+searchRouter.route('/service', serviceRouter);
 searchRouter.route('/', connectionRouter);
 searchRouter.route('/device', deviceRouter);
-searchRouter.route('/', resourceSearchRouter);
-searchRouter.route('/', serviceSearchRouter);
 
 export default searchRouter;
