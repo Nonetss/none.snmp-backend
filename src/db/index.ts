@@ -32,6 +32,7 @@ import { cdpNeighborTable } from '@/db/models/device/cdp.table';
 import { lldpNeighborTable } from '@/db/models/device/lldp.table';
 import { entityPhysicalTable } from '@/db/models/device/entity.table';
 import { routeTable } from '@/db/models/device/route.table';
+import { taskScheduleTable } from '@/db/models/taskSchedule.table';
 import { lldpView } from '@/db/models/views/lldp.view';
 
 export {
@@ -70,6 +71,8 @@ export {
   lldpNeighborTable,
   // Entity
   entityPhysicalTable,
+  // Scheduler
+  taskScheduleTable,
 
   // Views
   lldpView,

@@ -38,7 +38,12 @@ const rootHandler: Handler = (c) => {
 app.openapi(rootRoute, rootHandler);
 
 import apiRouter from '@/api';
+import { initScheduler } from '@/core/services/scheduler.service';
+
 app.route('/api', apiRouter);
+
+// Initialize background scheduler
+initScheduler();
 
 app.get('/', (c) => {
   return c.text('Hello Hono!');
