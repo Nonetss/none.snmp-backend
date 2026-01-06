@@ -103,9 +103,13 @@ export const identifyDeviceHandler: RouteHandler<
     }
 
     // Eliminar duplicados si un mismo dispositivo coincide por varias razones
-    const uniqueResults = Array.from(
-      new Map(results.map((r) => [r.id + r.matchType, r])).values(),
-    );
+    const uniqueMap = new Map();
+    for (const r of results) {
+      if (!uniqueMap.has(r.id)) {
+        uniqueMap.set(r.id, r);
+      }
+    }
+    const uniqueResults = Array.from(uniqueMap.values());
 
     return c.json(uniqueResults, 200);
   } catch (error) {
