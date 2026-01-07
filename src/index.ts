@@ -40,18 +40,26 @@ app.openapi(rootRoute, rootHandler);
 import apiRouter from '@/api';
 import { initScheduler } from '@/core/services/scheduler.service';
 import { seedMetrics } from '@/lib/snmp/seed';
+import { seedDefaultTasks } from '@/lib/snmp/seedTasks';
 
 app.route('/api', apiRouter);
 
-// Initialize background scheduler
-initScheduler();
-
 // Initial database seeding
-seedMetrics()
-  .then((mibs) => console.log(`[Seed] Successfully seeded ${mibs.length} MIBs`))
-  .catch((err) =>
-    console.error('[Seed] Critical error seeding database:', err),
-  );
+async function initialize() {
+  try {
+    const mibs = await seedMetrics();
+    console.log(`[Seed] Successfully seeded ${mibs.length} MIBs`);
+
+    await seedDefaultTasks();
+
+    // Initialize background scheduler
+    initScheduler();
+  } catch (err) {
+    console.error('[Seed] Critical error during initialization:', err);
+  }
+}
+
+initialize();
 
 app.get('/', (c) => {
   return c.text('Hello Hono!');
