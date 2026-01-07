@@ -1,0 +1,1 @@
+ALTER TABLE "subnet" ALTER COLUMN "cidr" SET DATA TYPE varchar(50) USING "cidr"::varchar(50);

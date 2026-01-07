@@ -2,28 +2,47 @@ import * as ipaddr from 'ipaddr.js';
 
 export function getAllIps(cidr: string): string[] {
   try {
-    const network = ipaddr.parseCIDR(cidr);
-    const start = network[0].toByteArray();
-    const mask = network[1];
-
-    const ips: string[] = [];
+    const [range, mask] = ipaddr.parseCIDR(cidr);
     const numIps = Math.pow(2, 32 - mask);
 
-    let startInt =
-      (start[0] << 24) | (start[1] << 16) | (start[2] << 8) | start[3];
+    // Use Uint32Array to avoid signed integer issues with bitwise operations
+    const startOctets = range.toByteArray();
+    const startInt =
+      ((startOctets[0] << 24) >>> 0) |
+      (startOctets[1] << 16) |
+      (startOctets[2] << 8) |
+      startOctets[3];
 
+    const ips: string[] = [];
+
+    if (mask === 32) {
+      return [range.toString()];
+    }
+
+    if (mask === 31) {
+      ips.push(intToIp(startInt));
+      ips.push(intToIp(startInt + 1));
+      return ips;
+    }
+
+    // For other masks, typically exclude network and broadcast
+    // But maybe for smaller masks we should include them?
+    // Usually in scanning we skip .0 and .255 in a /24
     for (let i = 1; i < numIps - 1; i++) {
-      const currentInt = startInt + i;
-      const ip = [
-        (currentInt >>> 24) & 0xff,
-        (currentInt >>> 16) & 0xff,
-        (currentInt >>> 8) & 0xff,
-        currentInt & 0xff,
-      ].join('.');
-      ips.push(ip);
+      ips.push(intToIp(startInt + i));
     }
     return ips;
   } catch (e) {
+    console.error(`Error parsing CIDR ${cidr}:`, e);
     return [];
   }
+}
+
+function intToIp(int: number): string {
+  return [
+    (int >>> 24) & 0xff,
+    (int >>> 16) & 0xff,
+    (int >>> 8) & 0xff,
+    int & 0xff,
+  ].join('.');
 }
