@@ -85,14 +85,11 @@ function formatValue(name: string, value: any): any {
 
   const strValue = sanitizeString(value).trim();
 
-  // 3. Normalizar MACs que vienen como String (ya sea con guiones, puntos o pegadas)
-  if (name === 'macAddr') {
-    if (
-      /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
-      /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
-    ) {
-      const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
-      return clean.match(/.{1,2}/g)?.join(':') || clean;
+  // 3. Normalizar MACs que vienen como String (ej: 4c-bd-8f-d8-af-32 -> 4C:BD:8F:D8:AF:32)
+  if (name === 'macAddr' && strValue) {
+    const clean = strValue.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+    if (clean.length === 12) {
+      return clean.match(/.{1,2}/g)?.join(':');
     }
   }
 
