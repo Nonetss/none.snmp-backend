@@ -1,0 +1,2 @@
+ALTER TABLE "hikvision" ADD COLUMN "interface_id" integer;--> statement-breakpoint
+ALTER TABLE "hikvision" ADD CONSTRAINT "hikvision_interface_id_interface_id_fkey" FOREIGN KEY ("interface_id") REFERENCES "interface"("id");
