@@ -43,6 +43,7 @@ export const deviceDetailedResultSchema = z.object({
     fdbQ: z.array(z.any()),
     vlans: z.array(z.any()),
   }),
+  hikvision: z.any().nullable(),
 });
 
 export const getDeviceSearchResponseSchema = z.array(

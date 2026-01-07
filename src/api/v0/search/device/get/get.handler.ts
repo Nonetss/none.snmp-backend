@@ -20,6 +20,7 @@ import {
   bridgeFdbQTable,
   vlanTable,
   entityPhysicalTable,
+  hikvisionTable,
   subnetTable,
   snmpAuthTable,
 } from '@/db';
@@ -90,6 +91,7 @@ export const getDeviceSearchHandler: RouteHandler<
           bridgeFdbQ,
           vlans,
           physicalEntities,
+          hikvisionRows,
         ] = await Promise.all([
           db.select().from(deviceTable).where(eq(deviceTable.id, deviceId)),
           db
@@ -148,6 +150,10 @@ export const getDeviceSearchHandler: RouteHandler<
             .select()
             .from(entityPhysicalTable)
             .where(eq(entityPhysicalTable.deviceId, deviceId)),
+          db
+            .select()
+            .from(hikvisionTable)
+            .where(eq(hikvisionTable.deviceId, deviceId)),
         ]);
 
         const device = deviceRow[0];
@@ -169,6 +175,7 @@ export const getDeviceSearchHandler: RouteHandler<
         const system = systemRow[0];
         const bridgeBase = bridgeBaseRow[0];
         const ipSnmp = ipSnmpRows[0];
+        const hikvision = hikvisionRows[0];
 
         // Telemetría de interfaces (último estado)
         const interfaceIds = interfaces.map((i) => i.id);
@@ -320,6 +327,9 @@ export const getDeviceSearchHandler: RouteHandler<
               updatedAt: v.updatedAt?.toISOString(),
             })),
           },
+          hikvision: hikvision
+            ? { ...hikvision, updatedAt: hikvision.updatedAt?.toISOString() }
+            : null,
         };
       }),
     );
