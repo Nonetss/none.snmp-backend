@@ -32,6 +32,7 @@ import { cdpNeighborTable } from '@/db/models/device/cdp.table';
 import { lldpNeighborTable } from '@/db/models/device/lldp.table';
 import { entityPhysicalTable } from '@/db/models/device/entity.table';
 import { routeTable } from '@/db/models/device/route.table';
+import { hikvisionTable } from '@/db/models/enterprise/hikvision.table';
 import { taskScheduleTable } from '@/db/models/taskSchedule.table';
 import { lldpView } from '@/db/models/views/lldp.view';
 
@@ -71,6 +72,8 @@ export {
   lldpNeighborTable,
   // Entity
   entityPhysicalTable,
+  // Enterprise
+  hikvisionTable,
   // Scheduler
   taskScheduleTable,
 

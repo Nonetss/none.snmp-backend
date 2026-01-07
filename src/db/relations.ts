@@ -55,6 +55,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.id,
       to: r.ipSnmpTable.deviceId,
     }),
+    hikvision: r.one.hikvisionTable({
+      from: r.deviceTable.id,
+      to: r.hikvisionTable.deviceId,
+    }),
   },
   subnetTable: {
     devices: r.many.deviceTable({
@@ -228,6 +232,12 @@ export const relations = defineRelations(schema, (r) => ({
     ipSnmp: r.one.ipSnmpTable({
       from: r.ipNetToMediaTable.ipSnmpId,
       to: r.ipSnmpTable.id,
+    }),
+  },
+  hikvisionTable: {
+    device: r.one.deviceTable({
+      from: r.hikvisionTable.deviceId,
+      to: r.deviceTable.id,
     }),
   },
 }));
