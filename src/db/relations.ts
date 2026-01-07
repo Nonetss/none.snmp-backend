@@ -59,6 +59,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.id,
       to: r.hikvisionTable.deviceId,
     }),
+    status: r.one.deviceStatusTable({
+      from: r.deviceTable.id,
+      to: r.deviceStatusTable.deviceId,
+    }),
   },
   subnetTable: {
     devices: r.many.deviceTable({
@@ -237,6 +241,16 @@ export const relations = defineRelations(schema, (r) => ({
   hikvisionTable: {
     device: r.one.deviceTable({
       from: r.hikvisionTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+    interface: r.one.interfaceTable({
+      from: r.hikvisionTable.interfaceId,
+      to: r.interfaceTable.id,
+    }),
+  },
+  deviceStatusTable: {
+    device: r.one.deviceTable({
+      from: r.deviceStatusTable.deviceId,
       to: r.deviceTable.id,
     }),
   },

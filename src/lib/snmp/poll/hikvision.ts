@@ -4,6 +4,7 @@ import {
   deviceTable,
   snmpAuthTable,
   hikvisionTable,
+  interfaceTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
@@ -177,11 +178,58 @@ export async function pollHikvision(deviceId?: number) {
         }
       }
 
+      let interfaceId: number | undefined = undefined;
+
+      if (hikData.macAddr || hikData.netAccessType) {
+        // Intentar encontrar una interfaz existente con esta MAC para este dispositivo
+        let existingInterface = hikData.macAddr
+          ? await db.query.interfaceTable.findFirst({
+              where: (t, { and, eq }) =>
+                and(
+                  eq(t.deviceId, device.id),
+                  eq(t.ifPhysAddress, hikData.macAddr),
+                ),
+            })
+          : null;
+
+        if (!existingInterface) {
+          // Si no existe, crear una interfaz "sintética" (ifIndex 0 o similar)
+          const [newInterface] = await db
+            .insert(interfaceTable)
+            .values({
+              deviceId: device.id,
+              ifIndex: 0, // Índice reservado para interfaces detectadas vía MIBs de fabricante
+              ifName: hikData.netAccessType || 'Hikvision Interface',
+              ifPhysAddress: hikData.macAddr,
+            })
+            .onConflictDoUpdate({
+              target: [interfaceTable.deviceId, interfaceTable.ifIndex],
+              set: {
+                ifName: sql`EXCLUDED.if_name`,
+                ifPhysAddress: sql`EXCLUDED.if_phys_address`,
+                updatedAt: new Date(),
+              },
+            })
+            .returning({ id: interfaceTable.id });
+          interfaceId = newInterface.id;
+        } else {
+          interfaceId = existingInterface.id;
+          // Opcionalmente actualizar el nombre si viene de netAccessType y la interfaz no tiene nombre
+          if (hikData.netAccessType && !existingInterface.ifName) {
+            await db
+              .update(interfaceTable)
+              .set({ ifName: hikData.netAccessType, updatedAt: new Date() })
+              .where(eq(interfaceTable.id, interfaceId));
+          }
+        }
+      }
+
       if (Object.keys(hikData).length > 0) {
         await db
           .insert(hikvisionTable)
           .values({
             deviceId: device.id,
+            interfaceId,
             hikIp: hikData.hikIp,
             hikPort: hikData.hikPort,
             hikEntityIndex: hikData.hikEntityIndex,
@@ -239,6 +287,7 @@ export async function pollHikvision(deviceId?: number) {
           .onConflictDoUpdate({
             target: [hikvisionTable.deviceId],
             set: {
+              interfaceId: sql`EXCLUDED.interface_id`,
               hikIp: sql`EXCLUDED.hik_ip`,
               hikPort: sql`EXCLUDED.hik_port`,
               hikEntityIndex: sql`EXCLUDED.hik_entity_index`,

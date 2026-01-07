@@ -1,5 +1,12 @@
-import { pgTable, varchar, integer, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  varchar,
+  integer,
+  uniqueIndex,
+  timestamp,
+} from 'drizzle-orm/pg-core';
 import { deviceTable } from '@/db/models/device/device.table';
+import { interfaceTable } from '@/db/models/device/interface.table';
 
 // Hikvision Enterprise MIBs: 1.3.6.1.4.1.50001 and 1.3.6.1.4.1.39165
 
@@ -10,6 +17,7 @@ export const hikvisionTable = pgTable(
     deviceId: integer('device_id')
       .notNull()
       .references(() => deviceTable.id),
+    interfaceId: integer('interface_id').references(() => interfaceTable.id),
 
     // HIKVISION-MIB (1.3.6.1.4.1.50001.1)
     hikIp: varchar('hik_ip', { length: 15 }), // hikIp 1.1
@@ -66,6 +74,7 @@ export const hikvisionTable = pgTable(
     manageServAddr: varchar('manage_serv_addr', { length: 64 }), // manageServAddr .32
     ntpServIpAddr: varchar('ntp_serv_ip_addr', { length: 255 }), // ntpServIpAddr .33
     managePort: integer('manage_port'), // managePort .34
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (t) => [uniqueIndex('device_hikvision_idx').on(t.deviceId)],
 );
