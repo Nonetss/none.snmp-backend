@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "movida",
@@ -10,6 +9,7 @@
         "@types/ping": "^0.4.4",
         "cron-parser": "^5.4.0",
         "dotenv": "^17.2.3",
+        "drizzle-kit": "^1.0.0-beta.6-4414a19",
         "drizzle-orm": "^1.0.0-beta.6-4414a19",
         "hono": "^4.9.12",
         "husky": "^9.1.7",

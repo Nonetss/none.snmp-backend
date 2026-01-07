@@ -16,6 +16,8 @@ const MIB_FILES = [
   'Q-BRIDGE-MIB.json',
   'ENTITY-MIB.json',
   'IP-FORWARD-MIB.json',
+  'HIKVISION-MIB.json',
+  'HIK-DEVICE-MIB.json',
 ];
 
 function mapDataType(

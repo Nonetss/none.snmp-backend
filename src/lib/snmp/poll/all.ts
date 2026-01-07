@@ -7,6 +7,7 @@ import { pollCdp } from './cdp';
 import { pollLldp } from './lldp';
 import { pollEntity } from './entity';
 import { pollRoutes } from './route';
+import { pollHikvision } from './hikvision';
 
 export async function pollAll(deviceId?: number) {
   console.log(
@@ -24,6 +25,7 @@ export async function pollAll(deviceId?: number) {
     pollRoutes(deviceId),
     pollResources(deviceId),
     pollIpSnmp(deviceId),
+    pollHikvision(deviceId),
   ]);
 
   console.log(`[Poll All] Finished full poll for ${deviceId || 'all devices'}`);
