@@ -279,12 +279,20 @@ export async function pollBridge(deviceId?: number) {
           const uniqueFdbMap = new Map<string, any>();
           fdbEntriesRaw.forEach((f) => uniqueFdbMap.set(f.address, f));
 
-          const fdbEntries = Array.from(uniqueFdbMap.values()).map((f) => ({
-            deviceId: device.id,
-            address: f.address,
-            port: Number(f.dot1dTpFdbPort),
-            status: Number(f.dot1dTpFdbStatus),
-          }));
+          const fdbEntries = Array.from(uniqueFdbMap.values())
+            .map((f) => {
+              const port = Number(f.dot1dTpFdbPort);
+              let status: number | null = Number(f.dot1dTpFdbStatus);
+              if (isNaN(status)) status = null;
+
+              return {
+                deviceId: device.id,
+                address: f.address,
+                port,
+                status,
+              };
+            })
+            .filter((f) => !isNaN(f.port));
 
           for (const chunk of chunkArray(fdbEntries, 1000)) {
             await db
@@ -345,13 +353,21 @@ export async function pollBridge(deviceId?: number) {
             uniqueFdbQMap.set(`${f.vlanId}_${f.address}`, f),
           );
 
-          const fdbQEntries = Array.from(uniqueFdbQMap.values()).map((f) => ({
-            deviceId: device.id,
-            vlanId: f.vlanId,
-            address: f.address,
-            port: Number(f.dot1qTpFdbPort),
-            status: Number(f.dot1qTpFdbStatus),
-          }));
+          const fdbQEntries = Array.from(uniqueFdbQMap.values())
+            .map((f) => {
+              const port = Number(f.dot1qTpFdbPort);
+              let status: number | null = Number(f.dot1qTpFdbStatus);
+              if (isNaN(status)) status = null;
+
+              return {
+                deviceId: device.id,
+                vlanId: f.vlanId,
+                address: f.address,
+                port,
+                status,
+              };
+            })
+            .filter((f) => !isNaN(f.port));
 
           for (const chunk of chunkArray(fdbQEntries, 1000)) {
             await db
