@@ -35,7 +35,7 @@ export const hikvisionTable = pgTable(
     deviceType: varchar('device_type', { length: 255 }), // deviceType .1
     hardwVersion: varchar('hardw_version', { length: 255 }), // hardwVersion .2
     softwVersion: varchar('softw_version', { length: 255 }), // softwVersion .3
-    macAddr: varchar('mac_addr', { length: 17 }), // macAddr .4
+    macAddr: varchar('mac_addr', { length: 255 }), // macAddr .4 (Aumentado por precaución)
     deviceID: varchar('device_id_str', { length: 255 }), // deviceID .5
     manufacturer: varchar('manufacturer', { length: 255 }), // manufacturer .6
     cpuPercent: varchar('cpu_percent', { length: 255 }), // cpuPercent .7
@@ -44,12 +44,12 @@ export const hikvisionTable = pgTable(
     memSize: varchar('mem_size', { length: 255 }), // memSize .10
     memUsed: varchar('mem_used', { length: 255 }), // memUsed .11
     restartDev: integer('restart_dev'), // restartDev .12
-    dynIpAddr: varchar('dyn_ip_addr', { length: 15 }), // dynIpAddr .13
-    dynNetMask: varchar('dyn_net_mask', { length: 15 }), // dynNetMask .14
-    dynGateway: varchar('dyn_gateway', { length: 15 }), // dynGateway .15
-    staticIpAddr: varchar('static_ip_addr', { length: 15 }), // staticIpAddr .16
-    staticNetMask: varchar('static_net_mask', { length: 15 }), // staticNetMask .17
-    staticGateway: varchar('static_gateway', { length: 15 }), // staticGateway .18
+    dynIpAddr: varchar('dyn_ip_addr', { length: 64 }), // dynIpAddr .13
+    dynNetMask: varchar('dyn_net_mask', { length: 64 }), // dynNetMask .14
+    dynGateway: varchar('dyn_gateway', { length: 64 }), // dynGateway .15
+    staticIpAddr: varchar('static_ip_addr', { length: 64 }), // staticIpAddr .16
+    staticNetMask: varchar('static_net_mask', { length: 64 }), // staticNetMask .17
+    staticGateway: varchar('static_gateway', { length: 64 }), // staticGateway .18
     sysTime: varchar('sys_time', { length: 255 }), // sysTime .19
     videoInChanNum: integer('video_in_chan_num'), // videoInChanNum .20
     videoEncode: varchar('video_encode', { length: 255 }), // videoEncode .21
@@ -63,7 +63,7 @@ export const hikvisionTable = pgTable(
     netAccessType: varchar('net_access_type', { length: 255 }), // netAccessType .29
     alarmInChanNum: integer('alarm_in_chan_num'), // alarmInChanNum .30
     alarmOutChanNum: integer('alarm_out_chan_num'), // alarmOutChanNum .31
-    manageServAddr: varchar('manage_serv_addr', { length: 15 }), // manageServAddr .32
+    manageServAddr: varchar('manage_serv_addr', { length: 64 }), // manageServAddr .32
     ntpServIpAddr: varchar('ntp_serv_ip_addr', { length: 255 }), // ntpServIpAddr .33
     managePort: integer('manage_port'), // managePort .34
   },

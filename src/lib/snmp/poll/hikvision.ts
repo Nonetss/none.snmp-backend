@@ -69,12 +69,30 @@ function formatValue(name: string, value: any): any {
   if (value === null || value === undefined) return null;
 
   if (Buffer.isBuffer(value)) {
-    if (name === 'macAddr') {
-      return Array.from(value)
-        .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-        .join(':');
+    // 1. Caso MAC Binaria (6 bytes no imprimibles)
+    if (name === 'macAddr' && value.length === 6) {
+      const isPrintable = value.every((b) => b >= 32 && b <= 126);
+      if (!isPrintable) {
+        return Array.from(value)
+          .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
+          .join(':');
+      }
     }
+    // 2. Default para buffers: intentar sanear como string
     return sanitizeString(value);
+  }
+
+  const strValue = sanitizeString(value).trim();
+
+  // 3. Normalizar MACs que vienen como String (ya sea con guiones, puntos o pegadas)
+  if (name === 'macAddr') {
+    if (
+      /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
+      /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
+    ) {
+      const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
+      return clean.match(/.{1,2}/g)?.join(':') || clean;
+    }
   }
 
   if (
