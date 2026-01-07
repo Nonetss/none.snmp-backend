@@ -11,6 +11,7 @@ import {
   ipNetToMediaTable,
   bridgeFdbTable,
   ipAddrEntryTable,
+  deviceStatusTable,
 } from '@/db';
 import { sql, count, eq, isNotNull, gt, desc, ne, and } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
@@ -39,6 +40,7 @@ export const getStatsHandler: RouteHandler<typeof getStatsRoute> = async (
       topHubsData,
       [newNeighbors],
       [newArp],
+      statusStats,
     ] = await Promise.all([
       db.select({ value: count() }).from(deviceTable),
       db.execute(sql`
@@ -53,9 +55,15 @@ export const getStatsHandler: RouteHandler<typeof getStatsRoute> = async (
           subnetName: subnetTable.name,
           cidr: subnetTable.cidr,
           deviceCount: count(deviceTable.id),
+          upCount: sql<number>`count(${deviceStatusTable.status}) FILTER (WHERE ${deviceStatusTable.status} = true)::int`,
+          downCount: sql<number>`count(${deviceStatusTable.status}) FILTER (WHERE ${deviceStatusTable.status} = false)::int`,
         })
         .from(subnetTable)
         .leftJoin(deviceTable, eq(subnetTable.id, deviceTable.subnetId))
+        .leftJoin(
+          deviceStatusTable,
+          eq(deviceTable.id, deviceStatusTable.deviceId),
+        )
         .groupBy(subnetTable.id, subnetTable.name, subnetTable.cidr),
       db
         .select({
@@ -112,6 +120,10 @@ export const getStatsHandler: RouteHandler<typeof getStatsRoute> = async (
         .select({ value: count() })
         .from(ipNetToMediaTable)
         .where(gt(ipNetToMediaTable.time, yesterday)),
+      db
+        .select({ status: deviceStatusTable.status, count: count() })
+        .from(deviceStatusTable)
+        .groupBy(deviceStatusTable.status),
     ]);
 
     const ifUp = ifaceStats.find((s) => (s as any).status === 1)?.count || 0;
@@ -124,11 +136,16 @@ export const getStatsHandler: RouteHandler<typeof getStatsRoute> = async (
       0,
     );
 
+    const devicesUp = statusStats.find((s) => s.status === true)?.count || 0;
+    const devicesDown = statusStats.find((s) => s.status === false)?.count || 0;
+
     return c.json(
       {
         devices: {
           totalManaged: managedCount.value,
           totalExternal: (externalResult.rows[0] as any).value || 0,
+          up: devicesUp,
+          down: devicesDown,
         },
         topology: {
           lldpConnections: lldpCount.value,

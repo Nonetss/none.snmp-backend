@@ -1,4 +1,5 @@
 import { deviceTable } from '@/db/models/device/device.table';
+import { deviceStatusTable } from '@/db/models/device/deviceStatus.table';
 import { subnetTable } from '@/db/models/subnet.table';
 import { snmpAuthTable } from '@/db/models/snmpAuth.table';
 import {
@@ -72,6 +73,8 @@ export {
   lldpNeighborTable,
   // Entity
   entityPhysicalTable,
+  // Device Status
+  deviceStatusTable,
   // Enterprise
   hikvisionTable,
   // Scheduler

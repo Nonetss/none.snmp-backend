@@ -1,5 +1,12 @@
 import { db } from '@/core/config';
-import { deviceTable, systemTable, interfaceTable, subnetTable } from '@/db';
+import {
+  deviceTable,
+  systemTable,
+  interfaceTable,
+  subnetTable,
+  hikvisionTable,
+  deviceStatusTable,
+} from '@/db';
 import { eq, sql } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { listDevicesRoute } from './list.route';
@@ -19,16 +26,23 @@ export const listDevicesHandler: RouteHandler<typeof listDevicesRoute> = async (
         sysName: systemTable.sysName,
         sysLocation: systemTable.sysLocation,
         sysDescr: systemTable.sysDescr,
+        status: deviceStatusTable.status,
+        hikMac: hikvisionTable.macAddr,
         macAddress: sql<string>`(
           SELECT if_phys_address 
           FROM ${interfaceTable} 
           WHERE ${interfaceTable.deviceId} = ${deviceTable.id} 
-          AND if_phys_address IS NOT NULL 
+          AND if_phys_address IS NOT NULL AND if_phys_address != ''
           LIMIT 1
         )`,
       })
       .from(deviceTable)
       .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
+      .leftJoin(hikvisionTable, eq(deviceTable.id, hikvisionTable.deviceId))
+      .leftJoin(
+        deviceStatusTable,
+        eq(deviceTable.id, deviceStatusTable.deviceId),
+      )
       .innerJoin(subnetTable, eq(deviceTable.subnetId, subnetTable.id));
 
     // Agrupar por subnet
@@ -45,9 +59,10 @@ export const listDevicesHandler: RouteHandler<typeof listDevicesRoute> = async (
       }
       grouped.get(d.subnetId).devices.push({
         id: d.id,
-        name: d.name,
+        name: d.name || d.sysName || d.ipv4,
         ipv4: d.ipv4,
-        macAddress: d.macAddress,
+        status: d.status ?? false,
+        macAddress: d.macAddress || d.hikMac,
         sysName: d.sysName,
         sysLocation: d.sysLocation,
         sysDescr: d.sysDescr,

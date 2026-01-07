@@ -4,7 +4,13 @@ export const TaskScheduleSchema = z.object({
   id: z.number().openapi({ example: 1 }),
   name: z.string().openapi({ example: 'Daily Full Poll' }),
   type: z
-    .enum(['SCAN_SUBNET', 'SCAN_ALL_SUBNETS', 'POLL_ALL', 'POLL_DEVICE'])
+    .enum([
+      'SCAN_SUBNET',
+      'SCAN_ALL_SUBNETS',
+      'POLL_ALL',
+      'POLL_DEVICE',
+      'PING_ALL',
+    ])
     .openapi({ example: 'POLL_ALL' }),
   targetId: z.number().nullable().openapi({ example: null }),
   cronExpression: z.string().openapi({ example: '0 0 * * *' }),
@@ -17,7 +23,13 @@ export const TaskScheduleSchema = z.object({
 
 export const CreateTaskScheduleSchema = z.object({
   name: z.string().openapi({ example: 'Daily Full Poll' }),
-  type: z.enum(['SCAN_SUBNET', 'SCAN_ALL_SUBNETS', 'POLL_ALL', 'POLL_DEVICE']),
+  type: z.enum([
+    'SCAN_SUBNET',
+    'SCAN_ALL_SUBNETS',
+    'POLL_ALL',
+    'POLL_DEVICE',
+    'PING_ALL',
+  ]),
   targetId: z.coerce.number().optional().openapi({ example: 1 }),
   cronExpression: z.string().openapi({ example: '0 0 * * *' }),
   enabled: z.boolean().optional().default(true),

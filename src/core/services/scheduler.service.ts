@@ -5,6 +5,7 @@ import { eq, lt, and, or, isNull } from 'drizzle-orm';
 import { CronExpressionParser as parser } from 'cron-parser';
 import { scanSubnet, scanAllSubnets } from '@/lib/snmp/scan';
 import { pollAll } from '@/lib/snmp/poll/all';
+import { pingAllDevices } from '@/lib/ping';
 
 export function initScheduler() {
   console.log('[Scheduler] Initializing...');
@@ -77,6 +78,8 @@ async function runTask(task: any) {
       await pollAll();
     } else if (task.type === 'POLL_DEVICE' && task.targetId) {
       await pollAll(task.targetId);
+    } else if (task.type === 'PING_ALL') {
+      await pingAllDevices();
     }
 
     // Calculate next run

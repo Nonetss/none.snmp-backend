@@ -4,6 +4,8 @@ export const getStatsResponseSchema = z.object({
   devices: z.object({
     totalManaged: z.number(),
     totalExternal: z.number(),
+    up: z.number(),
+    down: z.number(),
   }),
   topology: z.object({
     lldpConnections: z.number(),
@@ -22,6 +24,8 @@ export const getStatsResponseSchema = z.object({
       subnetName: z.string(),
       cidr: z.string(),
       deviceCount: z.number(),
+      upCount: z.number(),
+      downCount: z.number(),
     }),
   ),
   snmpVersionDistribution: z.array(
