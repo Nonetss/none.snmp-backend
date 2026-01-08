@@ -115,6 +115,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.monitorPortGroupItemTable.portGroupId,
       to: r.monitorPortGroupTable.id,
     }),
+    results: r.many.portStatusTable({
+      from: r.monitorPortGroupItemTable.id,
+      to: r.portStatusTable.portGroupItemId,
+    }),
   },
   monitorRuleTable: {
     deviceGroup: r.one.monitorGroupTable({
@@ -125,11 +129,23 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.monitorRuleTable.portGroupId,
       to: r.monitorPortGroupTable.id,
     }),
+    results: r.many.portStatusTable({
+      from: r.monitorRuleTable.id,
+      to: r.portStatusTable.ruleId,
+    }),
   },
   portStatusTable: {
     device: r.one.deviceTable({
       from: r.portStatusTable.deviceId,
       to: r.deviceTable.id,
+    }),
+    rule: r.one.monitorRuleTable({
+      from: r.portStatusTable.ruleId,
+      to: r.monitorRuleTable.id,
+    }),
+    portGroupItem: r.one.monitorPortGroupItemTable({
+      from: r.portStatusTable.portGroupItemId,
+      to: r.monitorPortGroupItemTable.id,
     }),
   },
   tagTable: {

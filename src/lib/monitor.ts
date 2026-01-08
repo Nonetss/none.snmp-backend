@@ -62,6 +62,8 @@ export async function executeMonitorRule(ruleId: number) {
         ports.map(async (p) => {
           const check = await checkTcpPort(device.ipv4, p.port, 2000);
           return {
+            ruleId: rule.id,
+            portGroupItemId: p.id,
             deviceId: device.id,
             port: p.port,
             status: check.open,
