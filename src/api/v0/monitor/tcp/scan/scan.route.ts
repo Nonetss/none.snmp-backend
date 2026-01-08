@@ -5,7 +5,7 @@ export const postPortScanRoute = createRoute({
   method: 'post',
   path: '/scan',
   summary: 'Perform a multi-port TCP scan (nmap style)',
-  tags: ['Monitor'],
+  tags: ['Monitor', 'TCP'],
   request: {
     body: {
       content: {
