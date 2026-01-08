@@ -1,6 +1,6 @@
 import { db } from '@/core/config';
 import { monitorGroupTable, monitorGroupDeviceTable } from '@/db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { patchMonitorGroupRoute } from './patch.route';
 
@@ -12,11 +12,24 @@ export const patchMonitorGroupHandler: RouteHandler<
     const groupId = parseInt(id, 10);
     const { name, description, deviceIds } = c.req.valid('json');
 
-    const [updatedGroup] = await db
-      .update(monitorGroupTable)
-      .set({ name, description })
-      .where(eq(monitorGroupTable.id, groupId))
-      .returning();
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+
+    let updatedGroup: any;
+
+    if (Object.keys(updateData).length > 0) {
+      [updatedGroup] = await db
+        .update(monitorGroupTable)
+        .set(updateData)
+        .where(eq(monitorGroupTable.id, groupId))
+        .returning();
+    } else {
+      [updatedGroup] = await db
+        .select()
+        .from(monitorGroupTable)
+        .where(eq(monitorGroupTable.id, groupId));
+    }
 
     if (!updatedGroup) {
       return c.json({ message: 'Group not found' }, 404) as any;
@@ -38,9 +51,18 @@ export const patchMonitorGroupHandler: RouteHandler<
       }
     }
 
+    // Obtener el conteo actualizado de dispositivos
+    const [countResult] = await db
+      .select({
+        count: sql<number>`count(*)::int`,
+      })
+      .from(monitorGroupDeviceTable)
+      .where(eq(monitorGroupDeviceTable.groupId, groupId));
+
     return c.json(
       {
         ...updatedGroup,
+        deviceCount: countResult?.count || 0,
         createdAt: updatedGroup.createdAt.toISOString(),
       },
       200,

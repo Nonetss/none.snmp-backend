@@ -38,6 +38,7 @@ export const getMonitorGroupHandler: RouteHandler<
     return c.json(
       {
         ...group,
+        deviceCount: devices.length,
         createdAt: group.createdAt.toISOString(),
         devices,
       },

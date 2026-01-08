@@ -27,6 +27,7 @@ export const postMonitorGroupHandler: RouteHandler<
     return c.json(
       {
         ...newGroup,
+        deviceCount: deviceIds?.length || 0,
         createdAt: newGroup.createdAt.toISOString(),
       },
       201,

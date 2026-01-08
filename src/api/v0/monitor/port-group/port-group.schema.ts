@@ -12,6 +12,7 @@ export const MonitorPortGroupSchema = z.object({
   id: z.number().openapi({ example: 1 }),
   name: z.string().openapi({ example: 'Web Stack' }),
   description: z.string().nullable().openapi({ example: 'Standard web ports' }),
+  portCount: z.number().openapi({ example: 2 }),
 });
 
 export const MonitorPortGroupDetailSchema = MonitorPortGroupSchema.extend({
