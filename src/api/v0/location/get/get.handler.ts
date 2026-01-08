@@ -1,6 +1,6 @@
 import { db } from '@/core/config';
-import { locationTable, deviceTable } from '@/db';
-import { eq, sql } from 'drizzle-orm';
+import { locationTable, deviceTable, subnetTable } from '@/db';
+import { eq, sql, inArray } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getLocationRoute } from './get.route';
 
@@ -45,7 +45,25 @@ export const getLocationHandler: RouteHandler<typeof getLocationRoute> = async (
       .from(deviceTable)
       .where(eq(deviceTable.locationId, locationId));
 
-    // 3. Obtener sub-localizaciones
+    // 3. Obtener las subredes implicadas
+    const uniqueSubnetIds = [...new Set(devices.map((d) => d.subnetId))];
+    const subnetsData =
+      uniqueSubnetIds.length > 0
+        ? await db
+            .select()
+            .from(subnetTable)
+            .where(inArray(subnetTable.id, uniqueSubnetIds))
+        : [];
+
+    // Agrupar dispositivos por subred
+    const subnets = subnetsData.map((s) => ({
+      id: s.id,
+      cidr: s.cidr,
+      name: s.name,
+      devices: devices.filter((d) => d.subnetId === s.id),
+    }));
+
+    // 4. Obtener sub-localizaciones
     const children = await db
       .select()
       .from(locationTable)
@@ -54,7 +72,7 @@ export const getLocationHandler: RouteHandler<typeof getLocationRoute> = async (
     return c.json(
       {
         ...location,
-        devices,
+        subnets,
         children,
       },
       200,

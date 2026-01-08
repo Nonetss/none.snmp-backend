@@ -16,8 +16,15 @@ export const CreateLocationSchema = LocationSchema.omit({
 export const UpdateLocationSchema = CreateLocationSchema.partial();
 
 export const GetLocationDetailResponseSchema = LocationSchema.extend({
-  devices: z
-    .array(DeviceSchema)
-    .openapi({ description: 'Devices in this location' }),
+  subnets: z
+    .array(
+      z.object({
+        id: z.number(),
+        cidr: z.string(),
+        name: z.string().nullable(),
+        devices: z.array(DeviceSchema),
+      }),
+    )
+    .openapi({ description: 'Subnets and their devices in this location' }),
   children: z.array(LocationSchema).openapi({ description: 'Sub-locations' }),
 });
