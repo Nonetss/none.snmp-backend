@@ -5,12 +5,15 @@ import {
   monitorPortGroupItemTable,
   portStatusTable,
   deviceTable,
+  notificationActionTable,
+  ntfyActionTable,
 } from '@/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { checkTcpPort } from '@/lib/tcp';
 import { logger } from '@/lib/logger';
 import { chunkArray } from '@/lib/db';
 import { CronExpressionParser as parser } from 'cron-parser';
+import { processNtfyAction } from './notifications/ntfy';
 
 /**
  * Ejecuta una regla de monitorización específica.
@@ -37,7 +40,11 @@ export async function executeMonitorRule(
 
     // 1. Obtener dispositivos del grupo
     const devices = await db
-      .select({ id: deviceTable.id, ipv4: deviceTable.ipv4 })
+      .select({
+        id: deviceTable.id,
+        ipv4: deviceTable.ipv4,
+        name: deviceTable.name,
+      })
       .from(deviceTable)
       .innerJoin(
         monitorGroupDeviceTable,
@@ -85,7 +92,10 @@ export async function executeMonitorRule(
       }
     }
 
-    // 5. Calcular siguiente ejecución y finalizar
+    // 5. Evaluar notificaciones
+    await evaluateNotifications(ruleId, results, devices, ports);
+
+    // 6. Calcular siguiente ejecución y finalizar
     const interval = parser.parse(rule.cronExpression);
     const nextRun = interval.next().toDate();
 
@@ -142,4 +152,133 @@ export async function monitorAllRules(startTime: Date = new Date()) {
       );
     }
   }
+}
+
+/**
+ * Evalúa si se deben enviar notificaciones para una regla.
+ */
+async function evaluateNotifications(
+  ruleId: number,
+  currentResults: any[],
+  devices: any[],
+  ports: any[],
+) {
+  const actions = await db
+    .select()
+    .from(notificationActionTable)
+    .where(
+      and(
+        eq(notificationActionTable.monitorRuleId, ruleId),
+        eq(notificationActionTable.enabled, true),
+      ),
+    );
+
+  if (actions.length === 0) return;
+
+  for (const action of actions) {
+    // 1. Determinar si el estado actual es "Down" según la agregación
+    const deviceDownStates = devices.map((device) => {
+      const deviceResults = currentResults.filter(
+        (r) => r.deviceId === device.id,
+      );
+      const failedPorts = deviceResults.filter((r) => r.status === false);
+
+      if (action.portAggregation === 'all') {
+        // Para que el dispositivo esté Down, TODOS sus puertos deben haber fallado
+        return failedPorts.length === ports.length && ports.length > 0;
+      } else {
+        // Para que el dispositivo esté Down, AL MENOS UN puerto debe haber fallado
+        return failedPorts.length > 0;
+      }
+    });
+
+    let isRuleDown = false;
+    if (action.deviceAggregation === 'all') {
+      // Para que la regla esté Down, TODOS los dispositivos deben estar Down
+      isRuleDown = deviceDownStates.every((down) => down === true);
+    } else {
+      // Para que la regla esté Down, AL MENOS UN dispositivo debe estar Down
+      isRuleDown = deviceDownStates.some((down) => down === true);
+    }
+
+    // 2. Manejar transición de estados y contadores
+    if (isRuleDown) {
+      // Si está mal, comprobar si debemos notificar
+      const shouldNotify = await checkTriggerConditions(action);
+      if (shouldNotify) {
+        await triggerNotification(action, currentResults);
+      }
+      // Actualizar estado a failing si no lo estaba
+      if (action.lastStatus !== false) {
+        await db
+          .update(notificationActionTable)
+          .set({ lastStatus: false })
+          .where(eq(notificationActionTable.id, action.id));
+      }
+    } else {
+      // Si está bien, comprobar si venía de un fallo (Recovery)
+      if (action.lastStatus === false) {
+        await triggerNotification(action, currentResults, true); // recovery message
+      }
+      // Actualizar estado a ok
+      await db
+        .update(notificationActionTable)
+        .set({ lastStatus: true })
+        .where(eq(notificationActionTable.id, action.id));
+    }
+  }
+}
+
+async function checkTriggerConditions(action: any): Promise<boolean> {
+  // Comprobar repeatIntervalMins
+  if (action.lastSentAt) {
+    const lastSent = new Date(action.lastSentAt).getTime();
+    const now = new Date().getTime();
+    const diffMins = (now - lastSent) / (1000 * 60);
+    if (diffMins < (action.repeatIntervalMins || 60)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+async function triggerNotification(
+  action: any,
+  results: any[],
+  isRecovery: boolean = false,
+) {
+  const [rule] = await db
+    .select()
+    .from(monitorRuleTable)
+    .where(eq(monitorRuleTable.id, action.monitorRuleId));
+
+  const failedChecks = results.filter((r) => r.status === false);
+  const statusStr = isRecovery ? 'RECOVERED' : 'DOWN';
+  let message = `Rule: ${rule?.name}\nStatus: ${statusStr}\nTime: ${new Date().toLocaleString()}`;
+
+  if (!isRecovery) {
+    message += `\nFailed: ${failedChecks.length}/${results.length} checks`;
+    // Añadir detalle de fallos (primeros 5)
+    failedChecks.slice(0, 5).forEach((f) => {
+      message += `\n- Device ${f.deviceId} Port ${f.port}`;
+    });
+  }
+
+  if (action.type === 'ntfy') {
+    const [ntfyAction] = await db
+      .select()
+      .from(ntfyActionTable)
+      .where(eq(ntfyActionTable.notificationActionId, action.id));
+
+    if (ntfyAction) {
+      await processNtfyAction(ntfyAction.id, message);
+    }
+  }
+
+  // Actualizar lastSentAt
+  await db
+    .update(notificationActionTable)
+    .set({ lastSentAt: new Date() })
+    .where(eq(notificationActionTable.id, action.id));
 }
