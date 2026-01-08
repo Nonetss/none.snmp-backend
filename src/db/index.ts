@@ -1,3 +1,4 @@
+import { locationTable } from '@/db/models/location.table';
 import { deviceTable } from '@/db/models/device/device.table';
 import { deviceStatusTable } from '@/db/models/device/deviceStatus.table';
 import { subnetTable } from '@/db/models/subnet.table';
@@ -79,6 +80,9 @@ export {
   hikvisionTable,
   // Scheduler
   taskScheduleTable,
+
+  // Locations
+  locationTable,
 
   // Views
   lldpView,
