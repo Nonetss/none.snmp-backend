@@ -1,4 +1,11 @@
-import { pgTable, integer, varchar, boolean } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  integer,
+  varchar,
+  boolean,
+  timestamp,
+  text,
+} from 'drizzle-orm/pg-core';
 import { monitorGroupTable } from './monitorGroup.table';
 import { monitorPortGroupTable } from './monitorPortGroup.table';
 
@@ -13,4 +20,13 @@ export const monitorRuleTable = pgTable('monitor_rule', {
     .notNull()
     .references(() => monitorPortGroupTable.id, { onDelete: 'cascade' }),
   enabled: boolean('enabled').notNull().default(true),
+
+  // Campos de programación (Scheduler integrado)
+  cronExpression: varchar('cron_expression', { length: 100 })
+    .notNull()
+    .default('*/5 * * * *'),
+  lastRun: timestamp('last_run', { withTimezone: true }),
+  nextRun: timestamp('next_run', { withTimezone: true }),
+  status: varchar('status', { length: 20 }).default('idle'), // 'idle', 'running', 'error'
+  lastResult: text('last_result'),
 });
