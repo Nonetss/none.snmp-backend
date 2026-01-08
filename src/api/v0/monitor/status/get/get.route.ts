@@ -12,6 +12,7 @@ export const getRuleStatusRoute = createRoute({
     }),
     query: z.object({
       deviceId: z.string().optional().openapi({ example: '1' }),
+      port: z.string().optional().openapi({ example: '80' }),
       from: z.string().optional().openapi({ example: '2026-01-08T00:00:00Z' }),
       to: z.string().optional().openapi({ example: '2026-01-08T23:59:59Z' }),
     }),
