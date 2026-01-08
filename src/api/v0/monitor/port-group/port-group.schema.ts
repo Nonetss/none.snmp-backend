@@ -23,6 +23,7 @@ export const MonitorPortGroupDetailSchema = MonitorPortGroupSchema.extend({
 
 export const CreateMonitorPortGroupSchema = MonitorPortGroupSchema.omit({
   id: true,
+  portCount: true,
 }).extend({
   items: z
     .array(

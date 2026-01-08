@@ -20,6 +20,7 @@ export const MonitorGroupDetailSchema = MonitorGroupSchema.extend({
 
 export const CreateMonitorGroupSchema = MonitorGroupSchema.omit({
   id: true,
+  deviceCount: true,
   createdAt: true,
 }).extend({
   deviceIds: z
