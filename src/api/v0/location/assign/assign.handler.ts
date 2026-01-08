@@ -21,9 +21,12 @@ export const assignLocationHandler: RouteHandler<
     }
 
     // Validar que la location existe
-    const location = await db.query.locationTable.findFirst({
-      where: eq(locationTable.id, locationId),
-    });
+    const [location] = await db
+      .select()
+      .from(locationTable)
+      .where(eq(locationTable.id, locationId))
+      .limit(1);
+
     if (!location) {
       return c.json({ message: 'Location not found' }, 404) as any;
     }

@@ -9,9 +9,11 @@ export const getLocationHandler: RouteHandler<typeof getLocationRoute> = async (
 ) => {
   try {
     const { id } = c.req.valid('param');
-    const location = await db.query.locationTable.findFirst({
-      where: eq(locationTable.id, parseInt(id, 10)),
-    });
+    const [location] = await db
+      .select()
+      .from(locationTable)
+      .where(eq(locationTable.id, parseInt(id, 10)))
+      .limit(1);
 
     if (!location) {
       return c.json({ message: 'Location not found' }, 404) as any;
