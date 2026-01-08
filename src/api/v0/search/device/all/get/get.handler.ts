@@ -9,6 +9,7 @@ import {
   ipNetToMediaTable,
 } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getDeviceAllRoute } from './get.route';
 

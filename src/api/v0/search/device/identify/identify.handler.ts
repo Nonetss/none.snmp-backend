@@ -7,6 +7,7 @@ import {
   ipSnmpTable,
 } from '@/db';
 import { eq, or, and } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { identifyDeviceRoute } from './identify.route';
 

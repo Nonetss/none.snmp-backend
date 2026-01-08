@@ -1,6 +1,7 @@
 import { db } from '@/core/config';
 import { snmpAuthTable } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getAuthRoute } from './get.route';
 

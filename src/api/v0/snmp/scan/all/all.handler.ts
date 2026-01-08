@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postScanAllRoute } from './all.route';
 import { scanAllSubnets } from '@/lib/snmp/scan';

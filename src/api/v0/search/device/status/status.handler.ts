@@ -1,6 +1,7 @@
 import { db } from '@/core/config';
 import { deviceTable, deviceStatusTable } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { listDeviceStatusRoute } from './status.route';
 

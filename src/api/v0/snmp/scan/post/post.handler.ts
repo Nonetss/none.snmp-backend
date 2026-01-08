@@ -1,6 +1,7 @@
 import { db } from '@/core/config';
 import { subnetTable } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postScanRoute } from './post.route';
 import { scanSubnet } from '@/lib/snmp/scan';

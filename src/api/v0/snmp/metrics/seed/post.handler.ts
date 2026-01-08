@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postSeedRoute } from './post.route';
 import { seedMetrics } from '@/lib/snmp/seed';

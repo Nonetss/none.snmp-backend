@@ -14,6 +14,7 @@ import {
   deviceStatusTable,
 } from '@/db';
 import { sql, count, eq, isNotNull, gt, desc, ne, and } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getStatsRoute } from './get.route';
 

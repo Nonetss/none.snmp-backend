@@ -1,6 +1,7 @@
 import { db } from '@/core/config';
 import { taskScheduleTable } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { patchTaskScheduleRoute } from './patch.route';
 import { CronExpressionParser as parser } from 'cron-parser';

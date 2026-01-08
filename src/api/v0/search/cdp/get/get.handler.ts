@@ -1,6 +1,7 @@
 import { db } from '@/core/config';
 import { cdpNeighborTable } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getDeviceCdpRoute } from './get.route';
 

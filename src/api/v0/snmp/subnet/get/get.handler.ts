@@ -1,6 +1,7 @@
 import { db } from '@/core/config';
 import { subnetTable, deviceTable } from '@/db';
 import { eq, sql } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getSubnetRoute } from './get.route';
 

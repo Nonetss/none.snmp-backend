@@ -9,6 +9,7 @@ import {
   cdpNeighborTable,
 } from '@/db';
 import { eq, and, inArray, sql, or } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getConnectionSearchRoute } from './get.route';
 import { db } from '@/core/config';

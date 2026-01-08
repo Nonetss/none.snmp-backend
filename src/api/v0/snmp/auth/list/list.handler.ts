@@ -1,5 +1,6 @@
 import { db } from '@/core/config';
 import { snmpAuthTable } from '@/db';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { listAuthRoute } from './list.route';
 

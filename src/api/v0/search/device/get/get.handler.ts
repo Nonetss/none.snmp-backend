@@ -25,6 +25,7 @@ import {
   snmpAuthTable,
 } from '@/db';
 import { eq, or, inArray, desc, sql } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getDeviceSearchRoute } from './get.route';
 

@@ -1,6 +1,7 @@
 import { db } from '@/core/config';
 import { hrSWInstalledEntryTable, resourceTable, deviceTable } from '@/db';
 import { eq, ilike } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getResourceFuzzySearchRoute } from './search.route';
 

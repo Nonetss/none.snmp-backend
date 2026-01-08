@@ -1,5 +1,6 @@
 import { db } from '@/core/config';
 import { taskScheduleTable } from '@/db';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { listTaskScheduleRoute } from './list.route';
 

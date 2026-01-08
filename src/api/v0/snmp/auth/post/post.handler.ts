@@ -2,6 +2,7 @@ import { db } from '@/core/config';
 import { snmpAuthTable } from '@/db';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postAuthRoute } from './post.route';
+import { logger } from '@/lib/logger';
 
 export const postAuthHandler: RouteHandler<typeof postAuthRoute> = async (
   c,
@@ -19,7 +20,7 @@ export const postAuthHandler: RouteHandler<typeof postAuthRoute> = async (
       200,
     );
   } catch (error) {
-    console.error('Error creating SNMP auth:', error);
+    logger.error({ error }, 'Error creating SNMP auth');
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };

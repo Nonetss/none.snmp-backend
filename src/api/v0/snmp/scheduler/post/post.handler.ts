@@ -3,6 +3,7 @@ import { taskScheduleTable } from '@/db';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postTaskScheduleRoute } from './post.route';
 import { CronExpressionParser as parser } from 'cron-parser';
+import { logger } from '@/lib/logger';
 
 export const postTaskScheduleHandler: RouteHandler<
   typeof postTaskScheduleRoute
@@ -10,39 +11,33 @@ export const postTaskScheduleHandler: RouteHandler<
   const data = c.req.valid('json');
 
   try {
-    let nextRun = null;
+    // Validate cron expression
     try {
       const interval = parser.parse(data.cronExpression);
-      nextRun = interval.next().toDate();
-    } catch (e: any) {
-      console.error(
-        `[Scheduler] Cron parse error: ${e.message} for expression: "${data.cronExpression}"`,
+      const nextRun = interval.next().toDate();
+      (data as any).nextRun = nextRun;
+    } catch (e) {
+      logger.error(
+        { error: e, cronExpression: data.cronExpression },
+        'Invalid cron expression',
       );
-      return c.json(
-        { message: 'Invalid cron expression', error: e.message },
-        400,
-      ) as any;
+      return c.json({ message: 'Invalid cron expression' }, 400) as any;
     }
 
-    const [newTask] = await db
+    const [inserted] = await db
       .insert(taskScheduleTable)
-      .values({
-        ...data,
-        nextRun,
-      })
+      .values(data as any)
       .returning();
 
     return c.json(
       {
-        ...newTask,
-        lastRun: newTask.lastRun?.toISOString() || null,
-        nextRun: newTask.nextRun?.toISOString() || null,
-        status: newTask.status as any,
+        id: inserted.id,
+        message: 'Task created successfully',
       },
-      201,
+      200,
     );
   } catch (error) {
-    console.error('Error creating task:', error);
+    logger.error({ error }, 'Error creating task');
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };

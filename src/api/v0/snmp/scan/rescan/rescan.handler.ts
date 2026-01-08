@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postRescanRoute } from './rescan.route';
 import { scanSubnet } from '@/lib/snmp/scan';

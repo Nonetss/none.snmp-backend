@@ -1,6 +1,7 @@
 import { db } from '@/core/config';
 import { hrSWRunEntryTable, hrSWRunPerfEntryTable, resourceTable } from '@/db';
 import { eq, and, desc } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getDeviceServicesRoute } from './get.route';
 
