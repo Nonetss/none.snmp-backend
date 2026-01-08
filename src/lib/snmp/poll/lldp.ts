@@ -7,7 +7,7 @@ import {
   lldpNeighborTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { walkSNMP, sanitizeString, normalizeMac } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -28,7 +28,6 @@ function formatValue(name: string, value: any): any {
   if (value === null || value === undefined) return null;
 
   // Subtipos y campos numéricos
-
   if (
     name.endsWith('Subtype') ||
     name.endsWith('Index') ||
@@ -37,23 +36,26 @@ function formatValue(name: string, value: any): any {
     return parseInt(String(value), 10);
   }
 
+  // Detectar si puede ser una MAC (basado en ChassisIdSubtype o PortIdSubtype)
+  // Subtype 4 para ChassisId y 3 para PortId suelen ser MAC addresses
+  // Pero lo intentamos normalizar si parece una MAC de todas formas
+  if (name === 'lldpRemChassisId' || name === 'lldpRemPortId') {
+    const normalized = normalizeMac(value);
+    if (normalized && normalized.includes(':')) {
+      return normalized;
+    }
+  }
+
   if (Buffer.isBuffer(value)) {
     // 1. Caso binario (6 bytes)
-
     if (value.length === 6) {
       const isPrintable = value.every((b) => b >= 32 && b <= 126);
-
       if (!isPrintable) {
-        return Array.from(value)
-
-          .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-
-          .join(':');
+        return normalizeMac(value);
       }
     }
 
     // 2. Caso binario genérico (Bits de capacidades)
-
     if (name === 'lldpRemSysCapSupported' || name === 'lldpRemSysCapEnabled') {
       return value.toString('hex').toUpperCase();
     }
@@ -62,82 +64,9 @@ function formatValue(name: string, value: any): any {
   const strValue = sanitizeString(value).trim();
 
   // 3. Normalizar MACs que vienen como String
-
-  if (
-    /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
-    /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
-  ) {
-    const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
-
-    return clean.match(/.{1,2}/g)?.join(':') || clean;
-  }
-
-  return strValue.replace(/[^\x20-\x7E]/g, '');
-}
-
-/**
- * Extrae la dirección de gestión del índice de SNMP.
- * lldpRemManAddrTable index: [timeMark, localPortNum, neighborIndex, subtype, length, ...address]
- */
-function parseMgmtAddress(indexParts: string[]): string | null {
-  if (indexParts.length < 5) return null;
-  const subtype = parseInt(indexParts[3], 10);
-  const len = parseInt(indexParts[4], 10);
-  const addrParts = indexParts.slice(5, 5 + len);
-
-  if (subtype === 1 && len === 4) {
-    // IPv4
-    return addrParts.join('.');
-  }
-  return null;
-}
-
-function formatValue(name: string, value: any): any {
-  if (value === null || value === undefined) return null;
-
-  // Subtipos y campos numéricos
-
-  if (
-    name.endsWith('Subtype') ||
-    name.endsWith('Index') ||
-    name.endsWith('Num')
-  ) {
-    return parseInt(String(value), 10);
-  }
-
-  if (Buffer.isBuffer(value)) {
-    // 1. Caso binario (6 bytes)
-
-    if (value.length === 6) {
-      const isPrintable = value.every((b) => b >= 32 && b <= 126);
-
-      if (!isPrintable) {
-        return Array.from(value)
-
-          .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-
-          .join(':');
-      }
-    }
-
-    // 2. Caso binario genérico (Bits de capacidades)
-
-    if (name === 'lldpRemSysCapSupported' || name === 'lldpRemSysCapEnabled') {
-      return value.toString('hex').toUpperCase();
-    }
-  }
-
-  const strValue = sanitizeString(value).trim();
-
-  // 3. Normalizar MACs que vienen como String
-
-  if (
-    /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
-    /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
-  ) {
-    const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
-
-    return clean.match(/.{1,2}/g)?.join(':') || clean;
+  const normalized = normalizeMac(strValue);
+  if (normalized && normalized.includes(':')) {
+    return normalized;
   }
 
   return strValue.replace(/[^\x20-\x7E]/g, '');

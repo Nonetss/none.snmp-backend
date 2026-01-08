@@ -7,7 +7,7 @@ import {
   interfaceTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { walkSNMP, sanitizeString, normalizeMac } from '@/lib/snmp';
 import { logger } from '@/lib/logger';
 
 const HIK_METRICS = [
@@ -70,28 +70,12 @@ const HIK_METRICS = [
 function formatValue(name: string, value: any): any {
   if (value === null || value === undefined) return null;
 
-  if (Buffer.isBuffer(value)) {
-    // 1. Caso MAC Binaria (6 bytes no imprimibles)
-    if (name === 'macAddr' && value.length === 6) {
-      const isPrintable = value.every((b) => b >= 32 && b <= 126);
-      if (!isPrintable) {
-        return Array.from(value)
-          .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-          .join(':');
-      }
-    }
-    // 2. Default para buffers: intentar sanear como string
-    return sanitizeString(value);
+  if (name === 'macAddr') {
+    return normalizeMac(value);
   }
 
-  const strValue = sanitizeString(value).trim();
-
-  // 3. Normalizar MACs que vienen como String (ej: 4c-bd-8f-d8-af-32 -> 4C:BD:8F:D8:AF:32)
-  if (name === 'macAddr' && strValue) {
-    const clean = strValue.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
-    if (clean.length === 12) {
-      return clean.match(/.{1,2}/g)?.join(':');
-    }
+  if (Buffer.isBuffer(value)) {
+    return sanitizeString(value);
   }
 
   if (

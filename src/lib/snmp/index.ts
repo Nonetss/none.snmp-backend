@@ -122,3 +122,32 @@ export function sanitizeString(val: any): string {
   // eslint-disable-next-line no-control-regex
   return str.replace(/\x00/g, '').trim();
 }
+
+/**
+ * Normaliza una dirección MAC a formato XX:XX:XX:XX:XX:XX en mayúsculas.
+ * Soporta Buffer y strings con diferentes separadores (-, :) o sin ellos.
+ */
+export function normalizeMac(val: any): string | null {
+  if (!val) return null;
+
+  let str = '';
+  if (Buffer.isBuffer(val)) {
+    // Si es un buffer de 6 bytes, es probable que sea una MAC binaria
+    if (val.length === 6) {
+      return Array.from(val)
+        .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
+        .join(':');
+    }
+    str = val.toString('utf-8');
+  } else {
+    str = String(val);
+  }
+
+  const clean = str.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+  if (clean.length === 12) {
+    return clean.match(/.{1,2}/g)?.join(':');
+  }
+
+  // Si no tiene 12 caracteres hex, devolvemos el string original saneado por si acaso
+  return sanitizeString(str);
+}

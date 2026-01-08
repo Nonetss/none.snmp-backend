@@ -10,7 +10,7 @@ import {
   bridgeFdbQTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP, getSNMP, sanitizeString } from '@/lib/snmp';
+import { walkSNMP, getSNMP, sanitizeString, normalizeMac } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -95,14 +95,10 @@ export async function pollBridge(deviceId?: number) {
           baseRes.forEach((vb, i) => {
             const name = baseMetrics[i].name;
             let val = vb.value;
-            if (Buffer.isBuffer(val)) {
-              if (name === 'dot1dBaseBridgeAddress') {
-                val = Array.from(val)
-                  .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-                  .join(':');
-              } else {
-                val = sanitizeString(val);
-              }
+            if (name === 'dot1dBaseBridgeAddress') {
+              val = normalizeMac(val);
+            } else if (Buffer.isBuffer(val)) {
+              val = sanitizeString(val);
             }
             baseData[name] = val;
           });

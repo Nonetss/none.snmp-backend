@@ -7,7 +7,7 @@ import {
   interfaceDataTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { walkSNMP, sanitizeString, normalizeMac } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -90,12 +90,10 @@ export async function pollInterfaces(deviceId?: number) {
           const iface = interfacesMap.get(ifIndex)!;
           let value: unknown = varbind.value;
 
-          if (Buffer.isBuffer(varbind.value)) {
-            if (name === 'ifPhysAddress') {
-              value = Array.from(varbind.value)
-                .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-                .join(':');
-            } else if (['ifIndex', 'ifType', 'ifMtu'].includes(name)) {
+          if (name === 'ifPhysAddress') {
+            value = normalizeMac(varbind.value);
+          } else if (Buffer.isBuffer(varbind.value)) {
+            if (['ifIndex', 'ifType', 'ifMtu'].includes(name)) {
               value = parseInt(varbind.value.toString('utf-8') || '0', 10);
             } else {
               value = sanitizeString(varbind.value);
@@ -103,7 +101,7 @@ export async function pollInterfaces(deviceId?: number) {
           } else {
             if (['ifIndex', 'ifType', 'ifMtu'].includes(name)) {
               value = parseInt(String(varbind.value) || '0', 10);
-            } else if (name !== 'ifPhysAddress') {
+            } else {
               value = sanitizeString(varbind.value);
             }
           }

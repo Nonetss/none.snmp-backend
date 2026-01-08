@@ -7,7 +7,7 @@ import {
   cdpNeighborTable,
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { walkSNMP, sanitizeString, normalizeMac } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -34,13 +34,11 @@ function formatValue(name: string, value: any): any {
       return value.toString('hex').toUpperCase();
     }
 
-    // 3. MAC Binaria
+    // 3. MAC Binaria (6 bytes)
     if (value.length === 6) {
       const isPrintable = value.every((b) => b >= 32 && b <= 126);
       if (!isPrintable) {
-        return Array.from(value)
-          .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-          .join(':');
+        return normalizeMac(value);
       }
     }
   }
@@ -48,12 +46,9 @@ function formatValue(name: string, value: any): any {
   const strValue = sanitizeString(value).trim();
 
   // 4. Normalizar MACs que vienen como String
-  if (
-    /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
-    /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
-  ) {
-    const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
-    return clean.match(/.{1,2}/g)?.join(':') || clean;
+  const normalized = normalizeMac(strValue);
+  if (normalized && normalized.includes(':')) {
+    return normalized;
   }
 
   return strValue.replace(/[^\x20-\x7E]/g, '');
