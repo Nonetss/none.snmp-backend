@@ -1,4 +1,5 @@
 import { db } from '@/core/config';
+import { logger } from '@/lib/logger';
 import {
   metricObjectsTable,
   deviceTable,
@@ -68,16 +69,59 @@ function formatValue(name: string, value: any): any {
   return sanitizeString(value);
 }
 
-export async function pollIpSnmp(deviceId?: number) {
-  console.time('pollIpSnmp');
+function bufferToIp(buf: Buffer): string {
+  if (buf.length === 4) return `${buf[0]}.${buf[1]}.${buf[2]}.${buf[3]}`;
+  return buf.toString('utf-8');
+}
 
+function bufferToMac(buf: Buffer): string {
+  if (buf.length === 0) return '';
+  return Array.from(buf)
+    .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
+    .join(':');
+}
+
+function formatValue(name: string, value: any): any {
+  if (value === null || value === undefined) return null;
+  const isBuffer = Buffer.isBuffer(value);
+  if (
+    [
+      'ipAdEntAddr',
+      'ipAdEntNetMask',
+      'ipAdEntBcastAddr',
+      'ipNetToMediaNetAddress',
+    ].includes(name)
+  ) {
+    if (isBuffer) return bufferToIp(value);
+    return String(value);
+  }
+  if (name === 'ipNetToMediaPhysAddress') {
+    if (isBuffer) return bufferToMac(value);
+    return String(value);
+  }
+  if (
+    [
+      'ipAdEntIfIndex',
+      'ipAdEntReasmMaxSize',
+      'ipNetToMediaIfIndex',
+      'ipNetToMediaType',
+    ].includes(name)
+  ) {
+    if (isBuffer) return parseInt(value.toString('utf-8') || '0', 10);
+    return parseInt(String(value), 10);
+  }
+  if (isBuffer) return sanitizeString(value);
+  return sanitizeString(value);
+}
+
+export async function pollIpSnmp(deviceId?: number) {
   const metrics = await db
     .select()
     .from(metricObjectsTable)
     .where(inArray(metricObjectsTable.name, TARGET_COLUMNS));
 
   if (metrics.length === 0) {
-    console.warn('[IP Poll] No metrics defined for IP-MIB.');
+    logger.warn('[IP Poll] No metrics defined for IP-MIB.');
     return;
   }
 
@@ -95,7 +139,7 @@ export async function pollIpSnmp(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[IP Poll] Processing ${devices.length} devices...`);
+  logger.info(`[IP Poll] Processing ${devices.length} devices...`);
 
   const CONCURRENCY_LIMIT = 5;
 
@@ -217,14 +261,12 @@ export async function pollIpSnmp(deviceId?: number) {
         }
       }
 
-      console.log(`[IP Poll] ${device.ipv4}: Success`);
+      logger.info(`[IP Poll] ${device.ipv4}: Success`);
     } catch (error) {
-      console.error(`[IP Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[IP Poll] Error ${device.ipv4}`);
     }
   };
 
   // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollIpSnmp');
 }

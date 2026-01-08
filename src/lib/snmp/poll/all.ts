@@ -8,9 +8,10 @@ import { pollLldp } from './lldp';
 import { pollEntity } from './entity';
 import { pollRoutes } from './route';
 import { pollHikvision } from './hikvision';
+import { logger } from '@/lib/logger';
 
 export async function pollAll(deviceId?: number) {
-  console.log(
+  logger.info(
     `[Poll All] Starting full poll for ${deviceId || 'all devices'}...`,
   );
 
@@ -28,5 +29,5 @@ export async function pollAll(deviceId?: number) {
     pollHikvision(deviceId),
   ]);
 
-  console.log(`[Poll All] Finished full poll for ${deviceId || 'all devices'}`);
+  logger.info(`[Poll All] Finished full poll for ${deviceId || 'all devices'}`);
 }

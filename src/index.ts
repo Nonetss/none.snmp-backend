@@ -42,20 +42,22 @@ import { initScheduler } from '@/core/services/scheduler.service';
 import { seedMetrics } from '@/lib/snmp/seed';
 import { seedDefaultTasks } from '@/lib/snmp/seedTasks';
 
+import { logger as pinoLogger } from '@/lib/logger';
+
 app.route('/api', apiRouter);
 
 // Initial database seeding
 async function initialize() {
   try {
     const mibs = await seedMetrics();
-    console.log(`[Seed] Successfully seeded ${mibs.length} MIBs`);
+    pinoLogger.info(`[Seed] Successfully seeded ${mibs.length} MIBs`);
 
     await seedDefaultTasks();
 
     // Initialize background scheduler
     initScheduler();
   } catch (err) {
-    console.error('[Seed] Critical error during initialization:', err);
+    pinoLogger.error({ err }, '[Seed] Critical error during initialization');
   }
 }
 

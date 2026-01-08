@@ -8,6 +8,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { logger } from '@/lib/logger';
 
 const HIK_METRICS = [
   // HIKVISION-MIB
@@ -119,8 +120,6 @@ function formatValue(name: string, value: any): any {
 }
 
 export async function pollHikvision(deviceId?: number) {
-  console.time('pollHikvision');
-
   // 1. Obtener definiciones de métricas
   const metrics = await db
     .select()
@@ -128,7 +127,7 @@ export async function pollHikvision(deviceId?: number) {
     .where(inArray(metricObjectsTable.name, Array.from(HIK_METRICS)));
 
   if (metrics.length === 0) {
-    console.warn('[Hikvision Poll] No metrics defined for Hikvision MIBs.');
+    logger.warn('[Hikvision Poll] No metrics defined for Hikvision MIBs.');
     return;
   }
 
@@ -147,7 +146,7 @@ export async function pollHikvision(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[Hikvision Poll] Processing ${devices.length} devices...`);
+  logger.info(`[Hikvision Poll] Processing ${devices.length} devices...`);
 
   const processDevice = async (device: (typeof devices)[0]) => {
     try {
@@ -341,16 +340,14 @@ export async function pollHikvision(deviceId?: number) {
               updatedAt: new Date(),
             },
           });
-        console.log(`[Hikvision Poll] ${device.ipv4}: Success`);
+        logger.info(`[Hikvision Poll] ${device.ipv4}: Success`);
       } else {
-        console.log(`[Hikvision Poll] ${device.ipv4}: No data`);
+        logger.info(`[Hikvision Poll] ${device.ipv4}: No data`);
       }
     } catch (error) {
-      console.error(`[Hikvision Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[Hikvision Poll] Error ${device.ipv4}`);
     }
   };
 
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollHikvision');
 }

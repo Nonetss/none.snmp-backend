@@ -6,9 +6,10 @@ import { CronExpressionParser as parser } from 'cron-parser';
 import { scanSubnet, scanAllSubnets } from '@/lib/snmp/scan';
 import { pollAll } from '@/lib/snmp/poll/all';
 import { pingAllDevices } from '@/lib/ping';
+import { logger } from '@/lib/logger';
 
 export function initScheduler() {
-  console.log('[Scheduler] Initializing...');
+  logger.info('[Scheduler] Initializing...');
 
   // Correr inmediatamente al arrancar para inicializar el next_run de las tareas que no lo tengan
   updateNextRuns().then(() => {
@@ -53,15 +54,13 @@ async function updateNextRuns() {
         .set({ nextRun })
         .where(eq(taskScheduleTable.id, task.id));
     } catch (e) {
-      console.error(
-        `[Scheduler] Invalid cron expression for task ${task.name}`,
-      );
+      logger.error(`[Scheduler] Invalid cron expression for task ${task.name}`);
     }
   }
 }
 
 async function runTask(task: any) {
-  console.log(`[Scheduler] Starting task: ${task.name} (${task.type})`);
+  logger.info(`[Scheduler] Starting task: ${task.name} (${task.type})`);
 
   try {
     // Mark as running
@@ -95,11 +94,11 @@ async function runTask(task: any) {
       })
       .where(eq(taskScheduleTable.id, task.id));
 
-    console.log(
+    logger.info(
       `[Scheduler] Task finished: ${task.name}. Next run: ${nextRun}`,
     );
   } catch (error: any) {
-    console.error(`[Scheduler] Task failed: ${task.name}`, error);
+    logger.error({ error }, `[Scheduler] Task failed: ${task.name}`);
 
     // Calculate next run anyway to avoid infinite retry loops
     try {

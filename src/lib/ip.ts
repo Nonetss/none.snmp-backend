@@ -1,4 +1,5 @@
 import * as ipaddr from 'ipaddr.js';
+import { logger } from '@/lib/logger';
 
 export function getAllIps(cidr: string): string[] {
   try {
@@ -33,7 +34,7 @@ export function getAllIps(cidr: string): string[] {
     }
     return ips;
   } catch (e) {
-    console.error(`Error parsing CIDR ${cidr}:`, e);
+    logger.error({ e }, `Error parsing CIDR ${cidr}`);
     return [];
   }
 }

@@ -5,6 +5,7 @@ import { pingHost } from '@/lib/icmp';
 import { getSNMP } from '@/lib/snmp';
 import { pollAll } from '@/lib/snmp/poll/all';
 import { getAllIps } from '@/lib/ip';
+import { logger } from '@/lib/logger';
 
 export async function scanSubnet(subnetId: number) {
   const [subnet] = await db
@@ -64,7 +65,7 @@ export async function scanSubnet(subnetId: number) {
           try {
             await pollAll(device.id);
           } catch (pollError) {
-            console.error(`[Scan] Error polling device ${ip}:`, pollError);
+            logger.error({ pollError }, `[Scan] Error polling device ${ip}`);
           }
         }
 
@@ -75,7 +76,7 @@ export async function scanSubnet(subnetId: number) {
           deviceId: device?.id,
         };
       } catch (dbError) {
-        console.error(`[Scan] DB error for IP ${ip}:`, dbError);
+        logger.error({ dbError }, `[Scan] DB error for IP ${ip}`);
         return { ip, status: 'failed' };
       }
     }
@@ -94,7 +95,7 @@ export async function scanSubnet(subnetId: number) {
 
 export async function scanAllSubnets() {
   const subnets = await db.select().from(subnetTable);
-  console.log(`[Scan All] Starting scan for ${subnets.length} subnets...`);
+  logger.info(`[Scan All] Starting scan for ${subnets.length} subnets...`);
 
   const allResults = [];
   for (const subnet of subnets) {
@@ -102,7 +103,7 @@ export async function scanAllSubnets() {
       const results = await scanSubnet(subnet.id);
       allResults.push({ subnetId: subnet.id, results });
     } catch (e) {
-      console.error(`[Scan All] Error scanning subnet ${subnet.id}:`, e);
+      logger.error({ e }, `[Scan All] Error scanning subnet ${subnet.id}`);
     }
   }
   return allResults;

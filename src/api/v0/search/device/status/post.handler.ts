@@ -1,6 +1,7 @@
 import { pingAllDevices } from '@/lib/ping';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postPingAllRoute } from './post.route';
+import { logger } from '@/lib/logger';
 
 export const postPingAllHandler: RouteHandler<typeof postPingAllRoute> = async (
   c,
@@ -16,7 +17,7 @@ export const postPingAllHandler: RouteHandler<typeof postPingAllRoute> = async (
       200,
     );
   } catch (error) {
-    console.error('[Force Ping All] Error:', error);
+    logger.error({ error }, '[Force Ping All] Error');
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };

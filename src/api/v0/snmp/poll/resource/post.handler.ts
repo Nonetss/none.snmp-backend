@@ -4,6 +4,7 @@ import type {
   postPollSingleResourceRoute,
 } from './post.route';
 import { pollResources } from '@/lib/snmp/poll/resource';
+import { logger } from '@/lib/logger';
 
 export const postPollResourcesHandler: RouteHandler<
   typeof postPollResourcesRoute
@@ -15,7 +16,7 @@ export const postPollResourcesHandler: RouteHandler<
       200,
     );
   } catch (error: any) {
-    console.error('[Poll Resources Handler] Error:', error);
+    logger.error({ error }, '[Poll Resources Handler] Error');
     return c.json(
       { message: 'Error during resource polling', error: error.message },
       500,
@@ -37,9 +38,9 @@ export const postPollSingleResourceHandler: RouteHandler<
       200,
     );
   } catch (error: any) {
-    console.error(
-      `[Poll Single Resource Handler] Error for device ${id}:`,
-      error,
+    logger.error(
+      { error, deviceId: id },
+      `[Poll Single Resource Handler] Error for device ${id}`,
     );
     return c.json(
       {

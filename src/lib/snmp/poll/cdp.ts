@@ -9,6 +9,7 @@ import {
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const CDP_METRICS = [
   'cdpCacheAddress',
@@ -59,8 +60,6 @@ function formatValue(name: string, value: any): any {
 }
 
 export async function pollCdp(deviceId?: number) {
-  console.time('pollCdp');
-
   // 1. Obtener definiciones de métricas
   const metrics = await db
     .select()
@@ -68,7 +67,7 @@ export async function pollCdp(deviceId?: number) {
     .where(inArray(metricObjectsTable.name, Array.from(CDP_METRICS)));
 
   if (metrics.length === 0) {
-    console.warn('[CDP Poll] No metrics defined for CISCO-CDP-MIB.');
+    logger.warn('[CDP Poll] No metrics defined for CISCO-CDP-MIB.');
     return;
   }
 
@@ -105,7 +104,7 @@ export async function pollCdp(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[CDP Poll] Processing ${devices.length} devices...`);
+  logger.info(`[CDP Poll] Processing ${devices.length} devices...`);
 
   const processDevice = async (device: (typeof devices)[0]) => {
     try {
@@ -194,7 +193,7 @@ export async function pollCdp(deviceId?: number) {
 
             const interfaceId = ifIndexMap.get(n.ifIndex);
             if (!interfaceId) {
-              console.warn(
+              logger.warn(
                 `[CDP Poll] ${device.ipv4}: Could not map ifIndex ${n.ifIndex} to any interfaceId. Skipping neighbor.`,
               );
               return null;
@@ -250,24 +249,22 @@ export async function pollCdp(deviceId?: number) {
                 },
               });
           }
-          console.log(
+          logger.info(
             `[CDP Poll] ${device.ipv4}: Successfully saved ${finalValues.length} neighbors`,
           );
         } catch (dbError) {
-          console.error(
-            `[CDP Poll] ${device.ipv4}: Error during database insertion:`,
-            dbError,
+          logger.error(
+            { dbError },
+            `[CDP Poll] ${device.ipv4}: Error during database insertion`,
           );
         }
       } else {
-        console.log(`[CDP Poll] ${device.ipv4}: No CDP neighbors found`);
+        logger.info(`[CDP Poll] ${device.ipv4}: No CDP neighbors found`);
       }
     } catch (error) {
-      console.error(`[CDP Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[CDP Poll] Error ${device.ipv4}`);
     }
   };
 
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollCdp');
 }

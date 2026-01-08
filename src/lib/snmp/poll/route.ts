@@ -54,16 +54,50 @@ function formatValue(name: string, value: any): any {
   return sanitizeString(value);
 }
 
-export async function pollRoutes(deviceId?: number) {
-  console.time('pollRoutes');
+import { logger } from '@/lib/logger';
 
+function bufferToIp(buf: Buffer): string {
+  if (buf.length === 4) return `${buf[0]}.${buf[1]}.${buf[2]}.${buf[3]}`;
+  return sanitizeString(buf);
+}
+
+function formatValue(name: string, value: any): any {
+  if (value === null || value === undefined) return null;
+
+  if (Buffer.isBuffer(value)) {
+    if (
+      name.includes('Dest') ||
+      name.includes('Mask') ||
+      name.includes('NextHop')
+    ) {
+      return bufferToIp(value);
+    }
+    return sanitizeString(value);
+  }
+
+  if (
+    [
+      'ipCidrRouteIfIndex',
+      'ipCidrRouteType',
+      'ipCidrRouteProto',
+      'ipCidrRouteAge',
+      'ipCidrRouteMetric1',
+    ].includes(name)
+  ) {
+    return parseInt(String(value), 10);
+  }
+
+  return sanitizeString(value);
+}
+
+export async function pollRoutes(deviceId?: number) {
   const metrics = await db
     .select()
     .from(metricObjectsTable)
     .where(inArray(metricObjectsTable.name, Array.from(ROUTE_METRICS)));
 
   if (metrics.length === 0) {
-    console.warn('[Route Poll] No metrics defined for IP-FORWARD-MIB.');
+    logger.warn('[Route Poll] No metrics defined for IP-FORWARD-MIB.');
     return;
   }
 
@@ -81,7 +115,7 @@ export async function pollRoutes(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[Route Poll] Processing ${devices.length} devices...`);
+  logger.info(`[Route Poll] Processing ${devices.length} devices...`);
 
   const CONCURRENCY_LIMIT = 5;
 
@@ -161,19 +195,17 @@ export async function pollRoutes(deviceId?: number) {
               },
             });
         }
-        console.log(
+        logger.info(
           `[Route Poll] ${device.ipv4}: Success (${routeEntries.length} routes)`,
         );
       } else {
-        console.log(`[Route Poll] ${device.ipv4}: No routes found`);
+        logger.info(`[Route Poll] ${device.ipv4}: No routes found`);
       }
     } catch (error) {
-      console.error(`[Route Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[Route Poll] Error ${device.ipv4}`);
     }
   };
 
   // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollRoutes');
 }

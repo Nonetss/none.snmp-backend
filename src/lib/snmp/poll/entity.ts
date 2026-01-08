@@ -8,6 +8,7 @@ import {
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const ENTITY_METRICS = [
   'entPhysicalDescr',
@@ -68,8 +69,6 @@ function formatValue(name: string, value: any): any {
 }
 
 export async function pollEntity(deviceId?: number) {
-  console.time('pollEntity');
-
   // 1. Obtener definiciones de métricas
   const metrics = await db
     .select()
@@ -77,7 +76,7 @@ export async function pollEntity(deviceId?: number) {
     .where(inArray(metricObjectsTable.name, Array.from(ENTITY_METRICS)));
 
   if (metrics.length === 0) {
-    console.warn('[Entity Poll] No metrics defined for ENTITY-MIB.');
+    logger.warn('[Entity Poll] No metrics defined for ENTITY-MIB.');
     return;
   }
 
@@ -96,7 +95,7 @@ export async function pollEntity(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[Entity Poll] Processing ${devices.length} devices...`);
+  logger.info(`[Entity Poll] Processing ${devices.length} devices...`);
 
   const CONCURRENCY_LIMIT = 5;
 
@@ -231,19 +230,17 @@ export async function pollEntity(deviceId?: number) {
             });
         }
 
-        console.log(
+        logger.info(
           `[Entity Poll] ${device.ipv4}: Success (${entityEntries.length} entities)`,
         );
       } else {
-        console.log(`[Entity Poll] ${device.ipv4}: No entities found`);
+        logger.info(`[Entity Poll] ${device.ipv4}: No entities found`);
       }
     } catch (error) {
-      console.error(`[Entity Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[Entity Poll] Error ${device.ipv4}`);
     }
   };
 
   // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollEntity');
 }

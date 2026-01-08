@@ -12,6 +12,7 @@ import {
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, getSNMP, sanitizeString } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const BASE_METRICS = [
   'dot1dBaseBridgeAddress',
@@ -40,8 +41,6 @@ const FDB_METRICS = [
 const FDB_Q_METRICS = ['dot1qTpFdbPort', 'dot1qTpFdbStatus'] as const;
 
 export async function pollBridge(deviceId?: number) {
-  console.time('pollBridge');
-
   // 1. Obtener definiciones de métricas
   const allMetricNames = [
     ...BASE_METRICS,
@@ -73,7 +72,7 @@ export async function pollBridge(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[Bridge Poll] Processing ${devices.length} devices...`);
+  logger.info(`[Bridge Poll] Processing ${devices.length} devices...`);
 
   const CONCURRENCY_LIMIT = 5;
 
@@ -389,14 +388,12 @@ export async function pollBridge(deviceId?: number) {
         }
       }
 
-      console.log(`[Bridge Poll] ${device.ipv4}: Success`);
+      logger.info(`[Bridge Poll] ${device.ipv4}: Success`);
     } catch (error) {
-      console.error(`[Bridge Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[Bridge Poll] Error ${device.ipv4}`);
     }
   };
 
   // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollBridge');
 }

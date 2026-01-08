@@ -2,14 +2,14 @@ import { db } from '@/core/config';
 import { deviceTable, deviceStatusTable } from '@/db';
 import { pingHost } from '@/lib/icmp';
 import { sql } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function pingAllDevices() {
-  console.time('pingAllDevices');
   const devices = await db
     .select({ id: deviceTable.id, ipv4: deviceTable.ipv4 })
     .from(deviceTable);
 
-  console.log(`[Ping] Pinging ${devices.length} devices...`);
+  logger.info(`[Ping] Pinging ${devices.length} devices...`);
 
   const results = await Promise.all(
     devices.map(async (device) => {
@@ -47,7 +47,7 @@ export async function pingAllDevices() {
       });
   }
 
-  console.timeEnd('pingAllDevices');
+  logger.info(`[Ping] Ping finished: ${up} up, ${down} down`);
 
   return {
     total: devices.length,

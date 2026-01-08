@@ -1,15 +1,16 @@
 import { db } from '@/core/config';
 import { taskScheduleTable } from '@/db';
+import { logger } from '@/lib/logger';
 
 export async function seedDefaultTasks() {
   const existingTasks = await db.select().from(taskScheduleTable);
 
   if (existingTasks.length > 0) {
-    console.log('[Seed] Tasks already exist, skipping default seeding.');
+    logger.info('[Seed] Tasks already exist, skipping default seeding.');
     return;
   }
 
-  console.log('[Seed] No tasks found. Creating default tasks...');
+  logger.info('[Seed] No tasks found. Creating default tasks...');
 
   const defaultTasks = [
     {
@@ -39,5 +40,5 @@ export async function seedDefaultTasks() {
   ];
 
   await db.insert(taskScheduleTable).values(defaultTasks);
-  console.log('[Seed] Successfully created default tasks.');
+  logger.info('[Seed] Successfully created default tasks.');
 }

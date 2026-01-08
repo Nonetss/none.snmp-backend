@@ -11,6 +11,7 @@ import {
 import { inArray, eq, sql, and } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const TARGET_COLUMNS = [
   'hrSWRunIndex',
@@ -83,15 +84,13 @@ function formatValue(name: string, value: any): any {
 }
 
 export async function pollResources(deviceId?: number) {
-  console.time('pollResources');
-
   const metrics = await db
     .select()
     .from(metricObjectsTable)
     .where(inArray(metricObjectsTable.name, TARGET_COLUMNS));
 
   if (metrics.length === 0) {
-    console.warn('[Resource Poll] No metrics defined for HR-SW.');
+    logger.warn('[Resource Poll] No metrics defined for HR-SW.');
     return;
   }
 
@@ -110,7 +109,7 @@ export async function pollResources(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[Resource Poll] Processing ${devices.length} devices...`);
+  logger.info(`[Resource Poll] Processing ${devices.length} devices...`);
 
   const CONCURRENCY_LIMIT = 5;
 
@@ -270,14 +269,12 @@ export async function pollResources(deviceId?: number) {
         }
       }
 
-      console.log(`[Resource Poll] ${device.ipv4}: Success`);
+      logger.info(`[Resource Poll] ${device.ipv4}: Success`);
     } catch (error) {
-      console.error(`[Resource Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[Resource Poll] Error ${device.ipv4}`);
     }
   };
 
   // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollResources');
 }

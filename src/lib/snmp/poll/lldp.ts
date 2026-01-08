@@ -9,6 +9,7 @@ import {
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const LLDP_METRICS = [
   'lldpRemChassisIdSubtype',
@@ -91,9 +92,75 @@ function parseMgmtAddress(indexParts: string[]): string | null {
   return null;
 }
 
-export async function pollLldp(deviceId?: number) {
-  console.time('pollLldp');
+function formatValue(name: string, value: any): any {
+  if (value === null || value === undefined) return null;
 
+  // Subtipos y campos numéricos
+
+  if (
+    name.endsWith('Subtype') ||
+    name.endsWith('Index') ||
+    name.endsWith('Num')
+  ) {
+    return parseInt(String(value), 10);
+  }
+
+  if (Buffer.isBuffer(value)) {
+    // 1. Caso binario (6 bytes)
+
+    if (value.length === 6) {
+      const isPrintable = value.every((b) => b >= 32 && b <= 126);
+
+      if (!isPrintable) {
+        return Array.from(value)
+
+          .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
+
+          .join(':');
+      }
+    }
+
+    // 2. Caso binario genérico (Bits de capacidades)
+
+    if (name === 'lldpRemSysCapSupported' || name === 'lldpRemSysCapEnabled') {
+      return value.toString('hex').toUpperCase();
+    }
+  }
+
+  const strValue = sanitizeString(value).trim();
+
+  // 3. Normalizar MACs que vienen como String
+
+  if (
+    /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(strValue) ||
+    /^[0-9A-Fa-f]{12}$/.test(strValue.replace(/[:.-]/g, ''))
+  ) {
+    const clean = strValue.replace(/[:.-]/g, '').toUpperCase();
+
+    return clean.match(/.{1,2}/g)?.join(':') || clean;
+  }
+
+  return strValue.replace(/[^\x20-\x7E]/g, '');
+}
+
+/**
+ * Extrae la dirección de gestión del índice de SNMP.
+ * lldpRemManAddrTable index: [timeMark, localPortNum, neighborIndex, subtype, length, ...address]
+ */
+function parseMgmtAddress(indexParts: string[]): string | null {
+  if (indexParts.length < 5) return null;
+  const subtype = parseInt(indexParts[3], 10);
+  const len = parseInt(indexParts[4], 10);
+  const addrParts = indexParts.slice(5, 5 + len);
+
+  if (subtype === 1 && len === 4) {
+    // IPv4
+    return addrParts.join('.');
+  }
+  return null;
+}
+
+export async function pollLldp(deviceId?: number) {
   // 1. Obtener definiciones de métricas
   const metrics = await db
     .select()
@@ -101,7 +168,7 @@ export async function pollLldp(deviceId?: number) {
     .where(inArray(metricObjectsTable.name, Array.from(LLDP_METRICS)));
 
   if (metrics.length === 0) {
-    console.warn('[LLDP Poll] No metrics defined for LLDP-MIB.');
+    logger.warn('[LLDP Poll] No metrics defined for LLDP-MIB.');
     return;
   }
 
@@ -145,7 +212,7 @@ export async function pollLldp(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[LLDP Poll] Processing ${devices.length} devices...`);
+  logger.info(`[LLDP Poll] Processing ${devices.length} devices...`);
 
   const processDevice = async (device: (typeof devices)[0]) => {
     try {
@@ -203,7 +270,7 @@ export async function pollLldp(deviceId?: number) {
       }
 
       const neighborEntries = Array.from(neighborsMap.values());
-      console.log(
+      logger.info(
         `[LLDP Poll] ${device.ipv4}: Found ${neighborEntries.length} neighbors in SNMP`,
       );
 
@@ -279,7 +346,7 @@ export async function pollLldp(deviceId?: number) {
 
             const interfaceId = ifIndexMap.get(n.localPortNum);
             if (!interfaceId) {
-              console.warn(
+              logger.warn(
                 `[LLDP Poll] ${device.ipv4}: Could not map localPortNum ${n.localPortNum} to any interfaceId. Skipping neighbor.`,
               );
               return null;
@@ -310,7 +377,7 @@ export async function pollLldp(deviceId?: number) {
         }
         const finalValues = Array.from(deduplicatedMap.values());
 
-        console.log(
+        logger.info(
           `[LLDP Poll] ${device.ipv4}: Ready to insert ${finalValues.length} unique neighbors after deduplication`,
         );
 
@@ -337,24 +404,23 @@ export async function pollLldp(deviceId?: number) {
                 },
               });
           }
-          console.log(
+          logger.info(
             `[LLDP Poll] ${device.ipv4}: Successfully saved ${finalValues.length} neighbors`,
           );
         } catch (dbError) {
-          console.error(
-            `[LLDP Poll] ${device.ipv4}: Error during database insertion:`,
-            dbError,
+          logger.error(
+            { dbError },
+            `[LLDP Poll] ${device.ipv4}: Error during database insertion`,
           );
         }
       }
-      console.log(
+      logger.info(
         `[LLDP Poll] ${device.ipv4}: Success (${neighborEntries.length} neighbors)`,
       );
     } catch (error) {
-      console.error(`[LLDP Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[LLDP Poll] Error ${device.ipv4}`);
     }
   };
 
   await Promise.all(devices.map(processDevice));
-  console.timeEnd('pollLldp');
 }

@@ -7,6 +7,7 @@ import {
 } from '@/db';
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { logger } from '@/lib/logger';
 
 // Columnas objetivo de la tabla system
 const TARGET_COLUMNS = [
@@ -31,8 +32,6 @@ function formatValue(name: string, value: any): any {
 }
 
 export async function pollSystem(deviceId?: number) {
-  console.time('pollSystem');
-
   // 1. Obtener definiciones
   const metrics = await db
     .select()
@@ -40,7 +39,7 @@ export async function pollSystem(deviceId?: number) {
     .where(inArray(metricObjectsTable.name, TARGET_COLUMNS));
 
   if (metrics.length === 0) {
-    console.warn('[System Poll] No metrics defined for System MIB.');
+    logger.warn('[System Poll] No metrics defined for System MIB.');
     return;
   }
 
@@ -59,7 +58,7 @@ export async function pollSystem(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[System Poll] Processing ${devices.length} devices...`);
+  logger.info(`[System Poll] Processing ${devices.length} devices...`);
 
   const CONCURRENCY_LIMIT = 10;
 
@@ -134,17 +133,15 @@ export async function pollSystem(deviceId?: number) {
             .where(eq(deviceTable.id, device.id));
         }
 
-        console.log(`[System Poll] ${device.ipv4}: Success`);
+        logger.info(`[System Poll] ${device.ipv4}: Success`);
       } else {
-        console.log(`[System Poll] ${device.ipv4}: No data`);
+        logger.info(`[System Poll] ${device.ipv4}: No data`);
       }
     } catch (error) {
-      console.error(`[System Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[System Poll] Error ${device.ipv4}`);
     }
   };
 
   // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollSystem');
 }

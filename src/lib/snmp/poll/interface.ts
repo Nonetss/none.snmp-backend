@@ -9,6 +9,7 @@ import {
 import { inArray, eq, sql } from 'drizzle-orm';
 import { walkSNMP, sanitizeString } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // Columnas que esperamos recuperar
 const TARGET_COLUMNS = [
@@ -28,8 +29,6 @@ const TARGET_COLUMNS = [
 ] as const;
 
 export async function pollInterfaces(deviceId?: number) {
-  console.time('pollInterfaces');
-
   // 1. Obtener definiciones de métricas
   const metrics = await db
     .select()
@@ -51,7 +50,7 @@ export async function pollInterfaces(deviceId?: number) {
   }
 
   const devices = await query;
-  console.log(`[Interface Poll] Processing ${devices.length} devices...`);
+  logger.info(`[Interface Poll] Processing ${devices.length} devices...`);
 
   const CONCURRENCY_LIMIT = 5; // Menor concurrencia porque interfaces pide muchos OIDs
 
@@ -115,7 +114,7 @@ export async function pollInterfaces(deviceId?: number) {
       const interfacesListRaw = Array.from(interfacesMap.values());
 
       if (interfacesListRaw.length === 0) {
-        console.log(`[Interface Poll] ${device.ipv4}: No interfaces found`);
+        logger.info(`[Interface Poll] ${device.ipv4}: No interfaces found`);
         return;
       }
 
@@ -211,16 +210,14 @@ export async function pollInterfaces(deviceId?: number) {
           await db.insert(interfaceDataTable).values(chunk);
         }
       }
-      console.log(
+      logger.info(
         `[Interface Poll] ${device.ipv4}: Success (${interfacesList.length} interfaces)`,
       );
     } catch (error) {
-      console.error(`[Interface Poll] Error ${device.ipv4}:`, error);
+      logger.error({ error }, `[Interface Poll] Error ${device.ipv4}`);
     }
   };
 
   // Procesar todos los dispositivos en paralelo
   await Promise.all(devices.map(processDevice));
-
-  console.timeEnd('pollInterfaces');
 }
