@@ -8,8 +8,8 @@ import {
   ipAddrEntryTable,
   ipNetToMediaTable,
 } from '@/db';
-import { inArray, eq, sql } from 'drizzle-orm';
-import { walkSNMP, sanitizeString } from '@/lib/snmp';
+import { inArray, eq, sql, and, isNotNull } from 'drizzle-orm';
+import { walkSNMP, sanitizeString, normalizeMac } from '@/lib/snmp';
 import { chunkArray } from '@/lib/db';
 
 const TARGET_COLUMNS = [
@@ -29,13 +29,6 @@ function bufferToIp(buf: Buffer): string {
   return buf.toString('utf-8');
 }
 
-function bufferToMac(buf: Buffer): string {
-  if (buf.length === 0) return '';
-  return Array.from(buf)
-    .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-    .join(':');
-}
-
 function formatValue(name: string, value: any): any {
   if (value === null || value === undefined) return null;
   const isBuffer = Buffer.isBuffer(value);
@@ -51,8 +44,7 @@ function formatValue(name: string, value: any): any {
     return String(value);
   }
   if (name === 'ipNetToMediaPhysAddress') {
-    if (isBuffer) return bufferToMac(value);
-    return String(value);
+    return normalizeMac(value);
   }
   if (
     [
@@ -65,52 +57,6 @@ function formatValue(name: string, value: any): any {
     if (isBuffer) return parseInt(value.toString('utf-8') || '0', 10);
     return parseInt(String(value), 10);
   }
-  if (isBuffer) return sanitizeString(value);
-  return sanitizeString(value);
-}
-
-function bufferToIp(buf: Buffer): string {
-  if (buf.length === 4) return `${buf[0]}.${buf[1]}.${buf[2]}.${buf[3]}`;
-  return buf.toString('utf-8');
-}
-
-function bufferToMac(buf: Buffer): string {
-  if (buf.length === 0) return '';
-  return Array.from(buf)
-    .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-    .join(':');
-}
-
-function formatValue(name: string, value: any): any {
-  if (value === null || value === undefined) return null;
-  const isBuffer = Buffer.isBuffer(value);
-  if (
-    [
-      'ipAdEntAddr',
-      'ipAdEntNetMask',
-      'ipAdEntBcastAddr',
-      'ipNetToMediaNetAddress',
-    ].includes(name)
-  ) {
-    if (isBuffer) return bufferToIp(value);
-    return String(value);
-  }
-  if (name === 'ipNetToMediaPhysAddress') {
-    if (isBuffer) return bufferToMac(value);
-    return String(value);
-  }
-  if (
-    [
-      'ipAdEntIfIndex',
-      'ipAdEntReasmMaxSize',
-      'ipNetToMediaIfIndex',
-      'ipNetToMediaType',
-    ].includes(name)
-  ) {
-    if (isBuffer) return parseInt(value.toString('utf-8') || '0', 10);
-    return parseInt(String(value), 10);
-  }
-  if (isBuffer) return sanitizeString(value);
   return sanitizeString(value);
 }
 
@@ -140,8 +86,6 @@ export async function pollIpSnmp(deviceId?: number) {
 
   const devices = await query;
   logger.info(`[IP Poll] Processing ${devices.length} devices...`);
-
-  const CONCURRENCY_LIMIT = 5;
 
   const processDevice = async (device: (typeof devices)[0]) => {
     try {
@@ -200,15 +144,17 @@ export async function pollIpSnmp(deviceId?: number) {
         }
       }
 
-      const ipList = Array.from(ipAddrMap.values());
-      const netList = Array.from(netToMediaMap.values());
       const timestamp = new Date();
 
+      // --- IP ADDR TABLE ---
+      const ipList = Array.from(ipAddrMap.values()).filter(
+        (row) => row.ipAdEntAddr,
+      );
       if (ipList.length > 0) {
         const entries = ipList.map((row: any) => ({
           ipSnmpId: ipSnmpRecord.id,
           time: timestamp,
-          ipAdEntAddr: row.ipAdEntAddr || '',
+          ipAdEntAddr: row.ipAdEntAddr,
           ipAdEntIfIndex: Number(row.ipAdEntIfIndex) || 0,
           ipAdEntNetMask: row.ipAdEntNetMask || '',
           ipAdEntBcastAddr: row.ipAdEntBcastAddr || '',
@@ -232,17 +178,40 @@ export async function pollIpSnmp(deviceId?: number) {
         }
       }
 
-      if (netList.length > 0) {
-        const entries = netList.map((row: any) => ({
-          ipSnmpId: ipSnmpRecord.id,
-          time: timestamp,
-          ipNetToMediaIfIndex: Number(row.ipNetToMediaIfIndex) || 0,
-          ipNetToMediaPhysAddress: row.ipNetToMediaPhysAddress || '',
-          ipNetToMediaNetAddress: row.ipNetToMediaNetAddress || '',
-          ipNetToMediaType: Number(row.ipNetToMediaType) || 0,
-        }));
+      // --- NET TO MEDIA TABLE (ARP) ---
+      const netListRaw = Array.from(netToMediaMap.values());
+      // Filtrar entradas sin IP o sin ifIndex que causarían conflictos
+      const finalNetEntries = new Map<string, any>();
 
-        for (const chunk of chunkArray(entries, 1000)) {
+      for (const row of netListRaw) {
+        const ifIdx = Number(row.ipNetToMediaIfIndex);
+        const netAddr = row.ipNetToMediaNetAddress?.toString();
+
+        if (!ifIdx || !netAddr || netAddr === '0.0.0.0') continue;
+
+        const key = `${ifIdx}_${netAddr}`;
+        // En caso de duplicados en el Map (que no deberían ocurrir por indexKey, pero por si acaso)
+        // priorizamos entradas con MAC
+        if (
+          !finalNetEntries.has(key) ||
+          (!finalNetEntries.get(key).ipNetToMediaPhysAddress &&
+            row.ipNetToMediaPhysAddress)
+        ) {
+          finalNetEntries.set(key, {
+            ipSnmpId: ipSnmpRecord.id,
+            time: timestamp,
+            ipNetToMediaIfIndex: ifIdx,
+            ipNetToMediaPhysAddress: row.ipNetToMediaPhysAddress || '',
+            ipNetToMediaNetAddress: netAddr,
+            ipNetToMediaType: Number(row.ipNetToMediaType) || 0,
+          });
+        }
+      }
+
+      const netList = Array.from(finalNetEntries.values());
+
+      if (netList.length > 0) {
+        for (const chunk of chunkArray(netList, 1000)) {
           await db
             .insert(ipNetToMediaTable)
             .values(chunk)
