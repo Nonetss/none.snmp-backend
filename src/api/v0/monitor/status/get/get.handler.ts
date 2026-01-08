@@ -12,7 +12,7 @@ export const getRuleStatusHandler: RouteHandler<
     const { deviceId, from, to } = c.req.valid('query');
 
     const rule = await db.query.monitorRuleTable.findFirst({
-      where: eq(monitorRuleTable.id, parseInt(ruleId)),
+      where: (fields, { eq }) => eq(fields.id, parseInt(ruleId)),
       with: {
         portGroup: {
           with: { items: true },
