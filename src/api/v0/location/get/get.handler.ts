@@ -11,6 +11,10 @@ export const getLocationHandler: RouteHandler<typeof getLocationRoute> = async (
     const { id } = c.req.valid('param');
     const locationId = parseInt(id, 10);
 
+    if (isNaN(locationId)) {
+      return c.json({ message: 'Invalid location ID' }, 400) as any;
+    }
+
     // 1. Obtener la localización base con el contador de dispositivos
     const [location] = await db
       .select({

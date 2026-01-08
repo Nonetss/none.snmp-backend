@@ -9,12 +9,12 @@ import subnetRouter from './subnet/index';
 
 const locationRouter = new OpenAPIHono();
 
+locationRouter.route('/subnet', subnetRouter);
+locationRouter.route('/', assignRouter);
 locationRouter.route('/', postRouter);
 locationRouter.route('/', listRouter);
 locationRouter.route('/', getRouter);
 locationRouter.route('/', patchRouter);
 locationRouter.route('/', deleteRouter);
-locationRouter.route('/', assignRouter);
-locationRouter.route('/subnet', subnetRouter);
 
 export default locationRouter;
