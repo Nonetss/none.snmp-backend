@@ -25,7 +25,13 @@ export const postMonitorPortGroupHandler: RouteHandler<
       await db.insert(monitorPortGroupItemTable).values(portEntries);
     }
 
-    return c.json(newGroup, 201);
+    return c.json(
+      {
+        ...newGroup,
+        portCount: items?.length || 0,
+      },
+      201,
+    );
   } catch (error) {
     console.error('[Post Monitor Port Group] Error:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;

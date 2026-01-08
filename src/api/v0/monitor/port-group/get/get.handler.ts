@@ -28,6 +28,7 @@ export const getMonitorPortGroupHandler: RouteHandler<
     return c.json(
       {
         ...group,
+        portCount: items.length,
         items,
       },
       200,
