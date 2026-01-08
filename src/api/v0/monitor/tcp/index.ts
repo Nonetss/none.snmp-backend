@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import getRouter from './get/get.index';
-import scanRouter from './post/scan.index';
+import scanRouter from './scan/scan.index';
 
 const tcpRouter = new OpenAPIHono();
 
