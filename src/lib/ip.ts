@@ -27,11 +27,8 @@ export function getAllIps(cidr: string): string[] {
     }
 
     // For other masks, typically exclude network and broadcast
-    // Also excluding .1 as it's usually the gateway
     for (let i = 1; i < numIps - 1; i++) {
-      const ip = intToIp(startInt + i);
-      if (ip.endsWith('.1')) continue;
-      ips.push(ip);
+      ips.push(intToIp(startInt + i));
     }
     return ips;
   } catch (e) {

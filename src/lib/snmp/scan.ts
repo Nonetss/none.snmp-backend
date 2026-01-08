@@ -49,6 +49,11 @@ export async function scanSubnet(
       }
     }
 
+    // Skip .1 only if it's JUST pingable (no SNMP)
+    if (ip.endsWith('.1') && !successfulAuthId) {
+      return { ip, status: 'offline' };
+    }
+
     if (successfulAuthId || effectiveCreateIfPingable) {
       try {
         const [device] = await db
