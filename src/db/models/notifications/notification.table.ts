@@ -19,4 +19,17 @@ export const notificationActionTable = pgTable('notification_action', {
   consecutiveFailures: integer('consecutive_failures').default(1), // nº de fallos seguidos para avisar
   repeatIntervalMins: integer('repeat_interval_mins').default(60), // cada cuánto repetir si sigue mal
   lastSentAt: timestamp('last_sent_at', { withTimezone: true }),
+  lastStatus: boolean('last_status').default(true), // true = ok, false = failing
+
+  // Agregación
+  deviceAggregation: varchar('device_aggregation', {
+    enum: ['any', 'all'],
+  })
+    .notNull()
+    .default('any'),
+  portAggregation: varchar('port_aggregation', {
+    enum: ['any', 'all'],
+  })
+    .notNull()
+    .default('any'),
 });
