@@ -1,7 +1,7 @@
 import { db } from '@/core/config';
 import { ntfyTopicTable } from '@/db';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { postNtfyTopicRoute } from './post.route';
+import type { postNtfyTopicRoute } from '@/api/v0/notifications/topic/post/post.route';
 
 export const postNtfyTopicHandler: RouteHandler<
   typeof postNtfyTopicRoute

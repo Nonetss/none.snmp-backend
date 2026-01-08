@@ -2,7 +2,7 @@ import { db } from '@/core/config';
 import { ntfyTopicTable } from '@/db';
 import { eq } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { getNtfyTopicRoute } from './get.route';
+import type { getNtfyTopicRoute } from '@/api/v0/notifications/topic/get/get.route';
 
 export const getNtfyTopicHandler: RouteHandler<
   typeof getNtfyTopicRoute

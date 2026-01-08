@@ -2,7 +2,7 @@ import { db } from '@/core/config';
 import { ntfyCredentialTable } from '@/db';
 import { eq } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { getNtfyCredentialRoute } from './get.route';
+import type { getNtfyCredentialRoute } from '@/api/v0/notifications/credential/get/get.route';
 
 export const getNtfyCredentialHandler: RouteHandler<
   typeof getNtfyCredentialRoute

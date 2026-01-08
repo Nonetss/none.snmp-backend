@@ -3,7 +3,7 @@ import {
   NtfyCredentialSchema,
   NtfyCredentialIdParamSchema,
   UpdateNtfyCredentialSchema,
-} from '../credential.schema';
+} from '@/api/v0/notifications/credential/credential.schema';
 
 export const patchNtfyCredentialRoute = createRoute({
   method: 'patch',

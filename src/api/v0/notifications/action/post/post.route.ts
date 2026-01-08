@@ -2,7 +2,7 @@ import { createRoute } from '@hono/zod-openapi';
 import {
   NotificationActionSchema,
   CreateNotificationActionSchema,
-} from '../action.schema';
+} from '@/api/v0/notifications/action/action.schema';
 
 export const postNotificationActionRoute = createRoute({
   method: 'post',

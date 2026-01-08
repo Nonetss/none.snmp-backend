@@ -1,5 +1,5 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { NtfyCredentialIdParamSchema } from '../credential.schema';
+import { NtfyCredentialIdParamSchema } from '@/api/v0/notifications/credential/credential.schema';
 
 export const deleteNtfyCredentialRoute = createRoute({
   method: 'delete',

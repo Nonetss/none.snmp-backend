@@ -1,7 +1,7 @@
 import { db } from '@/core/config';
 import { ntfyActionTable, ntfyActionTagTable } from '@/db';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { postNtfyActionRoute } from './post.route';
+import type { postNtfyActionRoute } from '@/api/v0/notifications/action/ntfy/post/post.route';
 
 export const postNtfyActionHandler: RouteHandler<
   typeof postNtfyActionRoute

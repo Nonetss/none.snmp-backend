@@ -2,7 +2,7 @@ import { db } from '@/core/config';
 import { ntfyCredentialTable } from '@/db';
 import { eq } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { deleteNtfyCredentialRoute } from './delete.route';
+import type { deleteNtfyCredentialRoute } from '@/api/v0/notifications/credential/delete/delete.route';
 
 export const deleteNtfyCredentialHandler: RouteHandler<
   typeof deleteNtfyCredentialRoute

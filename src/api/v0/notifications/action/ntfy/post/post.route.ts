@@ -1,5 +1,8 @@
 import { createRoute } from '@hono/zod-openapi';
-import { NtfyActionSchema, CreateNtfyActionSchema } from '../action.schema';
+import {
+  NtfyActionSchema,
+  CreateNtfyActionSchema,
+} from '@/api/v0/notifications/action/action.schema';
 
 export const postNtfyActionRoute = createRoute({
   method: 'post',

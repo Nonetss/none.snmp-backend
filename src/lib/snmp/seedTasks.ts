@@ -37,14 +37,6 @@ export async function seedDefaultTasks() {
       enabled: true,
       status: 'idle',
     },
-    {
-      name: 'monitor',
-      type: 'MONITOR_ALL_RULES',
-      targetId: 0,
-      cronExpression: '*/5 * * * *', // Cada 5 minutos
-      enabled: true,
-      status: 'idle',
-    },
   ];
 
   await db.insert(taskScheduleTable).values(defaultTasks);

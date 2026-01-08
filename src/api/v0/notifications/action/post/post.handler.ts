@@ -1,7 +1,7 @@
 import { db } from '@/core/config';
 import { notificationActionTable } from '@/db';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { postNotificationActionRoute } from './post.route';
+import type { postNotificationActionRoute } from '@/api/v0/notifications/action/post/post.route';
 
 export const postNotificationActionHandler: RouteHandler<
   typeof postNotificationActionRoute

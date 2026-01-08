@@ -1,7 +1,7 @@
 import { db } from '@/core/config';
 import { ntfyCredentialTable } from '@/db';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { postNtfyCredentialRoute } from './post.route';
+import type { postNtfyCredentialRoute } from '@/api/v0/notifications/credential/post/post.route';
 
 export const postNtfyCredentialHandler: RouteHandler<
   typeof postNtfyCredentialRoute

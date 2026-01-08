@@ -1,5 +1,5 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { NtfyCredentialSchema } from '../credential.schema';
+import { NtfyCredentialSchema } from '@/api/v0/notifications/credential/credential.schema';
 
 export const listNtfyCredentialRoute = createRoute({
   method: 'get',

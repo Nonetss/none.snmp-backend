@@ -2,7 +2,7 @@ import { db } from '@/core/config';
 import { ntfyTopicTable } from '@/db';
 import { eq } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { deleteNtfyTopicRoute } from './delete.route';
+import type { deleteNtfyTopicRoute } from '@/api/v0/notifications/topic/delete/delete.route';
 
 export const deleteNtfyTopicHandler: RouteHandler<
   typeof deleteNtfyTopicRoute

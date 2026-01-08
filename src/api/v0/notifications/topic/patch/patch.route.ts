@@ -3,7 +3,7 @@ import {
   NtfyTopicSchema,
   NtfyTopicIdParamSchema,
   UpdateNtfyTopicSchema,
-} from '../topic.schema';
+} from '@/api/v0/notifications/topic/topic.schema';
 
 export const patchNtfyTopicRoute = createRoute({
   method: 'patch',

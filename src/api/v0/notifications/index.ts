@@ -1,7 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import credentialRouter from './credential';
-import topicRouter from './topic';
-import actionRouter from './action';
+import credentialRouter from '@/api/v0/notifications/credential';
+import topicRouter from '@/api/v0/notifications/topic';
+import actionRouter from '@/api/v0/notifications/action';
 
 const notificationsRouter = new OpenAPIHono();
 

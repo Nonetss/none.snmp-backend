@@ -1,5 +1,5 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { NtfyTopicIdParamSchema } from '../topic.schema';
+import { NtfyTopicIdParamSchema } from '@/api/v0/notifications/topic/topic.schema';
 
 export const deleteNtfyTopicRoute = createRoute({
   method: 'delete',
