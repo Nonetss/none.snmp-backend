@@ -32,7 +32,6 @@
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.15.5",
     "@types/pino": "^7.0.5",
-    "drizzle-kit": "^1.0.0-beta.6-4414a19",
     "tsx": "^4.20.6"
   },
   "lint-staged": {
