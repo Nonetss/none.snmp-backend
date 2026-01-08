@@ -1,4 +1,5 @@
 import { locationTable } from '@/db/models/location.table';
+import { tagTable, deviceTagTable } from '@/db/models/tag.table';
 import { deviceTable } from '@/db/models/device/device.table';
 import { deviceStatusTable } from '@/db/models/device/deviceStatus.table';
 import { subnetTable } from '@/db/models/subnet.table';
@@ -83,6 +84,10 @@ export {
 
   // Locations
   locationTable,
+
+  // Tags
+  tagTable,
+  deviceTagTable,
 
   // Views
   lldpView,

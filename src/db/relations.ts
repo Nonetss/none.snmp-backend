@@ -67,6 +67,26 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.locationId,
       to: r.locationTable.id,
     }),
+    tags: r.many.deviceTagTable({
+      from: r.deviceTable.id,
+      to: r.deviceTagTable.deviceId,
+    }),
+  },
+  tagTable: {
+    devices: r.many.deviceTagTable({
+      from: r.tagTable.id,
+      to: r.deviceTagTable.tagId,
+    }),
+  },
+  deviceTagTable: {
+    device: r.one.deviceTable({
+      from: r.deviceTagTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+    tag: r.one.tagTable({
+      from: r.deviceTagTable.tagId,
+      to: r.tagTable.id,
+    }),
   },
   locationTable: {
     devices: r.many.deviceTable({
