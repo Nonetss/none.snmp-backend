@@ -1,6 +1,6 @@
 import { db } from '@/core/config';
 import { deviceTable, subnetTable, locationTable } from '@/db';
-import { eq, inArray, or } from 'drizzle-orm';
+import { eq, inArray, or, and, isNotNull } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { assignLocationRoute } from './assign.route';
 
@@ -8,7 +8,7 @@ export const assignLocationHandler: RouteHandler<
   typeof assignLocationRoute
 > = async (c) => {
   try {
-    const { locationId, subnetIds, deviceIds } = c.req.valid('json');
+    const { locationId, subnetIds, deviceIds, force } = c.req.valid('json');
 
     const hasSubnets = subnetIds && subnetIds.length > 0;
     const hasDevices = deviceIds && deviceIds.length > 0;
@@ -34,7 +34,6 @@ export const assignLocationHandler: RouteHandler<
     const conditions = [];
 
     if (hasSubnets) {
-      // Validar que las subnets existen (opcional, pero recomendado para integridad)
       const subnets = await db
         .select()
         .from(subnetTable)
@@ -53,11 +52,33 @@ export const assignLocationHandler: RouteHandler<
       conditions.push(inArray(deviceTable.id, deviceIds));
     }
 
+    const targetFilter = or(...conditions);
+
+    // Si force es false, verificar si hay dispositivos ya asignados a OTRA localización
+    if (!force) {
+      const alreadyAssigned = await db
+        .select({ id: deviceTable.id, ipv4: deviceTable.ipv4 })
+        .from(deviceTable)
+        .where(and(targetFilter, isNotNull(deviceTable.locationId)))
+        .limit(10);
+
+      if (alreadyAssigned.length > 0) {
+        return c.json(
+          {
+            message:
+              'Some devices are already assigned to a location. Use force: true to overwrite.',
+            conflictingDevices: alreadyAssigned,
+          },
+          400,
+        ) as any;
+      }
+    }
+
     // Actualizar dispositivos que cumplan cualquiera de las condiciones (OR)
     const result = await db
       .update(deviceTable)
       .set({ locationId })
-      .where(or(...conditions))
+      .where(targetFilter)
       .returning();
 
     return c.json(
