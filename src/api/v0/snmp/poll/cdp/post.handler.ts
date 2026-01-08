@@ -1,6 +1,7 @@
 import { pollCdp } from '@/lib/snmp/poll/cdp';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { postPollCdpRoute, postPollSingleCdpRoute } from './post.route';
+import { logger } from '@/lib/logger';
 
 export const postPollCdpHandler: RouteHandler<typeof postPollCdpRoute> = async (
   c,
@@ -9,7 +10,7 @@ export const postPollCdpHandler: RouteHandler<typeof postPollCdpRoute> = async (
     await pollCdp();
     return c.json({ message: 'Success' }, 200);
   } catch (error) {
-    console.error(`[Poll All CDP] Error:`, error);
+    logger.error({ error }, '[Poll All CDP] Error');
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };
@@ -24,7 +25,10 @@ export const postPollSingleCdpHandler: RouteHandler<
     await pollCdp(deviceId);
     return c.json({ message: 'Success' }, 200);
   } catch (error) {
-    console.error(`[Poll Single Device CDP] Error for device ${id}:`, error);
+    logger.error(
+      { error, deviceId: id },
+      `[Poll Single Device CDP] Error for device ${id}`,
+    );
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };

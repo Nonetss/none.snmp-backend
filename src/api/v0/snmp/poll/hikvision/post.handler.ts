@@ -4,6 +4,7 @@ import type {
   postPollSingleHikvisionRoute,
 } from './post.route';
 import { pollHikvision } from '@/lib/snmp/poll/hikvision';
+import { logger } from '@/lib/logger';
 
 export const postPollHikvisionHandler: RouteHandler<
   typeof postPollHikvisionRoute
@@ -12,7 +13,7 @@ export const postPollHikvisionHandler: RouteHandler<
     await pollHikvision();
     return c.json({ message: 'Success' }, 200);
   } catch (error) {
-    console.error(`[Poll All Hikvision] Error:`, error);
+    logger.error({ error }, '[Poll All Hikvision] Error');
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };
@@ -27,9 +28,9 @@ export const postPollSingleHikvisionHandler: RouteHandler<
     await pollHikvision(deviceId);
     return c.json({ message: 'Success' }, 200);
   } catch (error) {
-    console.error(
-      `[Poll Single Device Hikvision] Error for device ${id}:`,
-      error,
+    logger.error(
+      { error, deviceId: id },
+      `[Poll Single Device Hikvision] Error for device ${id}`,
     );
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }

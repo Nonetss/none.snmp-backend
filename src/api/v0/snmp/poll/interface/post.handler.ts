@@ -4,6 +4,7 @@ import type {
   postPollSingleInterfaceRoute,
 } from './post.route';
 import { pollInterfaces } from '@/lib/snmp/poll/interface';
+import { logger } from '@/lib/logger';
 
 export const postPollInterfacesHandler: RouteHandler<
   typeof postPollInterfacesRoute
@@ -18,7 +19,7 @@ export const postPollInterfacesHandler: RouteHandler<
       200,
     );
   } catch (error: any) {
-    console.error('[Poll Interfaces Handler] Error:', error);
+    logger.error({ error }, '[Poll Interfaces Handler] Error');
     return c.json(
       { message: 'Error during interface polling', error: error.message },
       500,
@@ -40,9 +41,9 @@ export const postPollSingleInterfaceHandler: RouteHandler<
       200,
     );
   } catch (error: any) {
-    console.error(
-      `[Poll Single Interface Handler] Error for device ${id}:`,
-      error,
+    logger.error(
+      { error, deviceId: id },
+      `[Poll Single Interface Handler] Error for device ${id}`,
     );
     return c.json(
       {

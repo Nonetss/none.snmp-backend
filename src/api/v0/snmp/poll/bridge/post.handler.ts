@@ -4,6 +4,7 @@ import type {
   postPollBridgeRoute,
   postPollSingleBridgeRoute,
 } from './post.route';
+import { logger } from '@/lib/logger';
 
 export const postPollBridgeHandler: RouteHandler<
   typeof postPollBridgeRoute
@@ -12,7 +13,7 @@ export const postPollBridgeHandler: RouteHandler<
     await pollBridge();
     return c.json({ message: 'Success' }, 200);
   } catch (error) {
-    console.error(`[Poll All Bridge] Error:`, error);
+    logger.error({ error }, '[Poll All Bridge] Error');
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };
@@ -27,7 +28,10 @@ export const postPollSingleBridgeHandler: RouteHandler<
     await pollBridge(deviceId);
     return c.json({ message: 'Success' }, 200);
   } catch (error) {
-    console.error(`[Poll Single Device Bridge] Error for device ${id}:`, error);
+    logger.error(
+      { error, deviceId: id },
+      `[Poll Single Device Bridge] Error for device ${id}`,
+    );
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };
