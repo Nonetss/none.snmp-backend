@@ -8,6 +8,7 @@ import {
   deviceStatusTable,
   deviceTagTable,
   tagTable,
+  locationTable,
 } from '@/db';
 import { eq, sql, inArray } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
@@ -31,6 +32,10 @@ export const listDevicesHandler: RouteHandler<typeof listDevicesRoute> = async (
         sysDescr: systemTable.sysDescr,
         status: deviceStatusTable.status,
         hikMac: hikvisionTable.macAddr,
+        locationId: locationTable.id,
+        locationName: locationTable.name,
+        locationDescription: locationTable.description,
+        locationParentId: locationTable.parentId,
         macAddress: sql<string>`(
           SELECT if_phys_address 
           FROM ${interfaceTable} 
@@ -42,6 +47,7 @@ export const listDevicesHandler: RouteHandler<typeof listDevicesRoute> = async (
       .from(deviceTable)
       .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
       .leftJoin(hikvisionTable, eq(deviceTable.id, hikvisionTable.deviceId))
+      .leftJoin(locationTable, eq(deviceTable.locationId, locationTable.id))
       .leftJoin(
         deviceStatusTable,
         eq(deviceTable.id, deviceStatusTable.deviceId),
@@ -91,6 +97,14 @@ export const listDevicesHandler: RouteHandler<typeof listDevicesRoute> = async (
         sysLocation: d.sysLocation,
         sysDescr: d.sysDescr,
         tags: tagsMap.get(d.id) || [],
+        location: d.locationId
+          ? {
+              id: d.locationId,
+              name: d.locationName,
+              description: d.locationDescription,
+              parentId: d.locationParentId,
+            }
+          : null,
       });
     }
 

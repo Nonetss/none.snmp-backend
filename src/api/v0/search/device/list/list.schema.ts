@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { TagSchema } from '../../../tag/tag.schema';
+import { LocationSchema } from '../../../location/location.schema';
 
 export const listDevicesResponseSchema = z.array(
   z.object({
@@ -17,6 +18,7 @@ export const listDevicesResponseSchema = z.array(
         sysLocation: z.string().nullable(),
         sysDescr: z.string().nullable(),
         tags: z.array(TagSchema),
+        location: LocationSchema.nullable(),
       }),
     ),
   }),
