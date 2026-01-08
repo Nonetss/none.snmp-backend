@@ -6,8 +6,10 @@ import {
   subnetTable,
   hikvisionTable,
   deviceStatusTable,
+  deviceTagTable,
+  tagTable,
 } from '@/db';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, inArray } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { listDevicesRoute } from './list.route';
@@ -46,6 +48,27 @@ export const listDevicesHandler: RouteHandler<typeof listDevicesRoute> = async (
       )
       .innerJoin(subnetTable, eq(deviceTable.subnetId, subnetTable.id));
 
+    // Obtener todas las etiquetas vinculadas a estos dispositivos
+    const deviceIds = devices.map((d) => d.id);
+    const tagsMap = new Map<number, any[]>();
+
+    if (deviceIds.length > 0) {
+      const allDeviceTags = await db
+        .select({
+          deviceId: deviceTagTable.deviceId,
+          tag: tagTable,
+        })
+        .from(deviceTagTable)
+        .innerJoin(tagTable, eq(deviceTagTable.tagId, tagTable.id))
+        .where(inArray(deviceTagTable.deviceId, deviceIds));
+
+      for (const dt of allDeviceTags) {
+        const list = tagsMap.get(dt.deviceId) || [];
+        list.push(dt.tag);
+        tagsMap.set(dt.deviceId, list);
+      }
+    }
+
     // Agrupar por subnet
     const grouped = new Map<number, any>();
 
@@ -67,6 +90,7 @@ export const listDevicesHandler: RouteHandler<typeof listDevicesRoute> = async (
         sysName: d.sysName,
         sysLocation: d.sysLocation,
         sysDescr: d.sysDescr,
+        tags: tagsMap.get(d.id) || [],
       });
     }
 
