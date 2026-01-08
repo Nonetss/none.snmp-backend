@@ -1,26 +1,19 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { PortStatusListSchema } from './status.schema';
+import { RuleStatusHistoryListSchema } from '@/api/v0/monitor/status/status.schema';
 
 export const listPortStatusRoute = createRoute({
   method: 'get',
   path: '/',
-  summary: 'List port status history',
+  summary: 'List port status history (Last 100)',
   tags: ['Monitor Status'],
-  request: {
-    query: z.object({
-      ruleId: z.string().optional().openapi({ example: '1' }),
-      deviceId: z.string().optional().openapi({ example: '1' }),
-      limit: z.string().optional().default('100').openapi({ example: '100' }),
-    }),
-  },
   responses: {
     200: {
       content: {
         'application/json': {
-          schema: PortStatusListSchema,
+          schema: RuleStatusHistoryListSchema,
         },
       },
-      description: 'List of port status records',
+      description: 'List of rules with their last 100 results',
     },
     500: {
       content: {

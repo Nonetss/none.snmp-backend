@@ -1,5 +1,6 @@
 import { db } from '@/core/config';
-import { monitorGroupTable } from '@/db';
+import { monitorGroupTable, monitorGroupDeviceTable } from '@/db';
+import { eq, sql } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { listMonitorGroupsRoute } from './list.route';
 
@@ -7,7 +8,21 @@ export const listMonitorGroupsHandler: RouteHandler<
   typeof listMonitorGroupsRoute
 > = async (c) => {
   try {
-    const groups = await db.select().from(monitorGroupTable);
+    const groups = await db
+      .select({
+        id: monitorGroupTable.id,
+        name: monitorGroupTable.name,
+        description: monitorGroupTable.description,
+        createdAt: monitorGroupTable.createdAt,
+        deviceCount: sql<number>`count(${monitorGroupDeviceTable.deviceId})::int`,
+      })
+      .from(monitorGroupTable)
+      .leftJoin(
+        monitorGroupDeviceTable,
+        eq(monitorGroupTable.id, monitorGroupDeviceTable.groupId),
+      )
+      .groupBy(monitorGroupTable.id);
+
     return c.json(
       groups.map((g) => ({
         ...g,

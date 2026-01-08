@@ -8,6 +8,7 @@ export const MonitorGroupSchema = z.object({
     .string()
     .nullable()
     .openapi({ example: 'Main production servers group' }),
+  deviceCount: z.number().openapi({ example: 5 }),
   createdAt: z.string().openapi({ example: '2024-01-01T00:00:00Z' }),
 });
 
