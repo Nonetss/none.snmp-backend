@@ -3,7 +3,7 @@ import { TcpCheckQuerySchema, TcpCheckResponseSchema } from '../tcp.schema';
 
 export const getTcpCheckRoute = createRoute({
   method: 'get',
-  path: '/tcp',
+  path: '/',
   summary: 'Check if a TCP port is open (nc -vz emu)',
   tags: ['Monitor'],
   request: {
