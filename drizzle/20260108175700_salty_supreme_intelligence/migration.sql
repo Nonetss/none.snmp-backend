@@ -1,0 +1,1 @@
+ALTER TABLE "subnet" ADD COLUMN "scan_pingable" boolean DEFAULT false;

@@ -16,6 +16,7 @@ export const getSubnetHandler: RouteHandler<typeof getSubnetRoute> = async (
         id: subnetTable.id,
         cidr: subnetTable.cidr,
         name: subnetTable.name,
+        scanPingable: subnetTable.scanPingable,
         deviceCount: sql<number>`cast(count(${deviceTable.id}) as int)`,
       })
       .from(subnetTable)

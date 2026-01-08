@@ -7,7 +7,10 @@ import { pollAll } from '@/lib/snmp/poll/all';
 import { getAllIps } from '@/lib/ip';
 import { logger } from '@/lib/logger';
 
-export async function scanSubnet(subnetId: number) {
+export async function scanSubnet(
+  subnetId: number,
+  overrideCreateIfPingable?: boolean,
+) {
   const [subnet] = await db
     .select()
     .from(subnetTable)
@@ -16,6 +19,9 @@ export async function scanSubnet(subnetId: number) {
   if (!subnet) {
     throw new Error(`Subnet with ID ${subnetId} not found`);
   }
+
+  const effectiveCreateIfPingable =
+    overrideCreateIfPingable ?? subnet.scanPingable ?? false;
 
   const allAuths = await db.select().from(snmpAuthTable);
   const ips = getAllIps(subnet.cidr);
@@ -43,7 +49,7 @@ export async function scanSubnet(subnetId: number) {
       }
     }
 
-    if (successfulAuthId) {
+    if (successfulAuthId || effectiveCreateIfPingable) {
       try {
         const [device] = await db
           .insert(deviceTable)
@@ -61,7 +67,7 @@ export async function scanSubnet(subnetId: number) {
           })
           .returning({ id: deviceTable.id });
 
-        if (device) {
+        if (device && successfulAuthId) {
           try {
             await pollAll(device.id);
           } catch (pollError) {
@@ -71,7 +77,7 @@ export async function scanSubnet(subnetId: number) {
 
         return {
           ip,
-          status: 'success',
+          status: successfulAuthId ? 'success' : 'pingable',
           authId: successfulAuthId,
           deviceId: device?.id,
         };
@@ -93,14 +99,14 @@ export async function scanSubnet(subnetId: number) {
   return results;
 }
 
-export async function scanAllSubnets() {
+export async function scanAllSubnets(overrideCreateIfPingable?: boolean) {
   const subnets = await db.select().from(subnetTable);
   logger.info(`[Scan All] Starting scan for ${subnets.length} subnets...`);
 
   const allResults = [];
   for (const subnet of subnets) {
     try {
-      const results = await scanSubnet(subnet.id);
+      const results = await scanSubnet(subnet.id, overrideCreateIfPingable);
       allResults.push({ subnetId: subnet.id, results });
     } catch (e) {
       logger.error({ e }, `[Scan All] Error scanning subnet ${subnet.id}`);

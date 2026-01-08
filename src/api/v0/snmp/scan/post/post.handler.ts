@@ -9,7 +9,7 @@ import { scanSubnet } from '@/lib/snmp/scan';
 export const postScanHandler: RouteHandler<typeof postScanRoute> = async (
   c,
 ) => {
-  const { cidr, subnetName } = c.req.valid('json');
+  const { cidr, subnetName, createIfPingable } = c.req.valid('json');
 
   try {
     let [subnet] = await db
@@ -22,11 +22,18 @@ export const postScanHandler: RouteHandler<typeof postScanRoute> = async (
         .values({
           cidr,
           name: subnetName || `Subnet ${cidr}`,
+          scanPingable: createIfPingable,
         })
+        .returning();
+    } else if (createIfPingable !== undefined) {
+      [subnet] = await db
+        .update(subnetTable)
+        .set({ scanPingable: createIfPingable })
+        .where(eq(subnetTable.id, subnet.id))
         .returning();
     }
 
-    const results = await scanSubnet(subnet.id);
+    const results = await scanSubnet(subnet.id, createIfPingable);
 
     return c.json({ message: 'Scan completed', results }, 200);
   } catch (error) {

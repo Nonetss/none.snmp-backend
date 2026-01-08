@@ -7,7 +7,7 @@ export const RescanSchema = z.object({
 export const ScanResultSchema = z.object({
   ip: z.string().openapi({ example: '10.10.1.5' }),
   status: z
-    .enum(['success', 'failed', 'offline'])
+    .enum(['success', 'failed', 'offline', 'pingable'])
     .openapi({ example: 'success' }),
   authId: z.number().optional().openapi({ example: 1 }),
   deviceId: z.number().optional().openapi({ example: 12 }),
