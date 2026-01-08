@@ -1,5 +1,5 @@
 import { createRoute } from '@hono/zod-openapi';
-import { PortScanSchema, PortScanResponseSchema } from '../monitor.schema';
+import { PortScanSchema, PortScanResponseSchema } from '../tcp.schema';
 
 export const postPortScanRoute = createRoute({
   method: 'post',

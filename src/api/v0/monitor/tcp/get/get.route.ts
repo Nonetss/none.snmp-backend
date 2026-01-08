@@ -1,5 +1,5 @@
 import { createRoute } from '@hono/zod-openapi';
-import { TcpCheckQuerySchema, TcpCheckResponseSchema } from '../monitor.schema';
+import { TcpCheckQuerySchema, TcpCheckResponseSchema } from '../tcp.schema';
 
 export const getTcpCheckRoute = createRoute({
   method: 'get',
