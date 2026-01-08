@@ -71,6 +71,66 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.deviceTable.id,
       to: r.deviceTagTable.deviceId,
     }),
+    monitorGroups: r.many.monitorGroupDeviceTable({
+      from: r.deviceTable.id,
+      to: r.monitorGroupDeviceTable.deviceId,
+    }),
+    portStatus: r.many.portStatusTable({
+      from: r.deviceTable.id,
+      to: r.portStatusTable.deviceId,
+    }),
+  },
+  monitorGroupTable: {
+    devices: r.many.monitorGroupDeviceTable({
+      from: r.monitorGroupTable.id,
+      to: r.monitorGroupDeviceTable.groupId,
+    }),
+    rules: r.many.monitorRuleTable({
+      from: r.monitorGroupTable.id,
+      to: r.monitorRuleTable.deviceGroupId,
+    }),
+  },
+  monitorGroupDeviceTable: {
+    group: r.one.monitorGroupTable({
+      from: r.monitorGroupDeviceTable.groupId,
+      to: r.monitorGroupTable.id,
+    }),
+    device: r.one.deviceTable({
+      from: r.monitorGroupDeviceTable.deviceId,
+      to: r.deviceTable.id,
+    }),
+  },
+  monitorPortGroupTable: {
+    items: r.many.monitorPortGroupItemTable({
+      from: r.monitorPortGroupTable.id,
+      to: r.monitorPortGroupItemTable.portGroupId,
+    }),
+    rules: r.many.monitorRuleTable({
+      from: r.monitorPortGroupTable.id,
+      to: r.monitorRuleTable.portGroupId,
+    }),
+  },
+  monitorPortGroupItemTable: {
+    group: r.one.monitorPortGroupTable({
+      from: r.monitorPortGroupItemTable.portGroupId,
+      to: r.monitorPortGroupTable.id,
+    }),
+  },
+  monitorRuleTable: {
+    deviceGroup: r.one.monitorGroupTable({
+      from: r.monitorRuleTable.deviceGroupId,
+      to: r.monitorGroupTable.id,
+    }),
+    portGroup: r.one.monitorPortGroupTable({
+      from: r.monitorRuleTable.portGroupId,
+      to: r.monitorPortGroupTable.id,
+    }),
+  },
+  portStatusTable: {
+    device: r.one.deviceTable({
+      from: r.portStatusTable.deviceId,
+      to: r.deviceTable.id,
+    }),
   },
   tagTable: {
     devices: r.many.deviceTagTable({

@@ -1,6 +1,16 @@
 import { locationTable } from '@/db/models/location.table';
 import { tagTable, deviceTagTable } from '@/db/models/tag.table';
 import { deviceTable } from '@/db/models/device/device.table';
+import {
+  monitorGroupTable,
+  monitorGroupDeviceTable,
+} from '@/db/models/monitor/monitorGroup.table';
+import {
+  monitorPortGroupTable,
+  monitorPortGroupItemTable,
+} from '@/db/models/monitor/monitorPortGroup.table';
+import { monitorRuleTable } from '@/db/models/monitor/monitorRule.table';
+import { portStatusTable } from '@/db/models/monitor/portStatus.table';
 import { deviceStatusTable } from '@/db/models/device/deviceStatus.table';
 import { subnetTable } from '@/db/models/subnet.table';
 import { snmpAuthTable } from '@/db/models/snmpAuth.table';
@@ -88,6 +98,14 @@ export {
   // Tags
   tagTable,
   deviceTagTable,
+
+  // Monitoring
+  monitorGroupTable,
+  monitorGroupDeviceTable,
+  monitorPortGroupTable,
+  monitorPortGroupItemTable,
+  monitorRuleTable,
+  portStatusTable,
 
   // Views
   lldpView,
