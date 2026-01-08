@@ -1,10 +1,4 @@
 import { db } from '@/core/config';
-import {
-  monitorRuleTable,
-  monitorGroupTable,
-  monitorPortGroupTable,
-} from '@/db';
-import { eq } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { listMonitorRulesRoute } from './list.route';
 
@@ -12,32 +6,39 @@ export const listMonitorRulesHandler: RouteHandler<
   typeof listMonitorRulesRoute
 > = async (c) => {
   try {
-    const rules = await db
-      .select({
-        id: monitorRuleTable.id,
-        name: monitorRuleTable.name,
-        deviceGroupId: monitorRuleTable.deviceGroupId,
-        portGroupId: monitorRuleTable.portGroupId,
-        enabled: monitorRuleTable.enabled,
-        deviceGroup: monitorGroupTable,
-        portGroup: monitorPortGroupTable,
-      })
-      .from(monitorRuleTable)
-      .innerJoin(
-        monitorGroupTable,
-        eq(monitorRuleTable.deviceGroupId, monitorGroupTable.id),
-      )
-      .innerJoin(
-        monitorPortGroupTable,
-        eq(monitorRuleTable.portGroupId, monitorPortGroupTable.id),
-      );
+    const rules = await db.query.monitorRuleTable.findMany({
+      with: {
+        deviceGroup: {
+          with: {
+            devices: true,
+          },
+        },
+        portGroup: {
+          with: {
+            items: true,
+          },
+        },
+      },
+    });
 
     return c.json(
       rules.map((r) => ({
         ...r,
+        status: (r.status as any) || 'idle',
+        lastRun: r.lastRun?.toISOString() || null,
+        nextRun: r.nextRun?.toISOString() || null,
         deviceGroup: {
-          ...r.deviceGroup,
+          id: r.deviceGroup.id,
+          name: r.deviceGroup.name,
+          description: r.deviceGroup.description,
+          deviceCount: r.deviceGroup.devices.length,
           createdAt: r.deviceGroup.createdAt.toISOString(),
+        },
+        portGroup: {
+          id: r.portGroup.id,
+          name: r.portGroup.name,
+          description: r.portGroup.description,
+          portCount: r.portGroup.items.length,
         },
       })),
       200,
