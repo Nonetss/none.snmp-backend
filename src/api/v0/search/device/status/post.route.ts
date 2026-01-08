@@ -9,10 +9,15 @@ export const postPingAllRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: z.object({ message: z.string() }),
+          schema: z.object({
+            message: z.string(),
+            total: z.number(),
+            up: z.number(),
+            down: z.number(),
+          }),
         },
       },
-      description: 'Ping process started',
+      description: 'Ping process completed',
     },
     500: {
       description: 'Internal Server Error',

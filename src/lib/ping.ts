@@ -25,6 +25,9 @@ export async function pingAllDevices() {
     }),
   );
 
+  const up = results.filter((r) => r.status).length;
+  const down = results.length - up;
+
   for (const res of results) {
     await db
       .insert(deviceStatusTable)
@@ -45,4 +48,10 @@ export async function pingAllDevices() {
   }
 
   console.timeEnd('pingAllDevices');
+
+  return {
+    total: devices.length,
+    up,
+    down,
+  };
 }

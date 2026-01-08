@@ -6,12 +6,15 @@ export const postPingAllHandler: RouteHandler<typeof postPingAllRoute> = async (
   c,
 ) => {
   try {
-    // Ejecutamos en segundo plano para no bloquear la respuesta
-    pingAllDevices().catch((err) => {
-      console.error('[Force Ping All] Background task failed:', err);
-    });
+    const results = await pingAllDevices();
 
-    return c.json({ message: 'Ping process started in background' }, 200);
+    return c.json(
+      {
+        message: 'Ping process completed',
+        ...results,
+      },
+      200,
+    );
   } catch (error) {
     console.error('[Force Ping All] Error:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;
