@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { DeviceSchema } from '@/api/v0/snmp/device/device.schema';
 
 export const LocationSchema = z.object({
   id: z.number().openapi({ example: 1 }),
@@ -8,5 +9,15 @@ export const LocationSchema = z.object({
   deviceCount: z.number().optional().openapi({ example: 5 }),
 });
 
-export const CreateLocationSchema = LocationSchema.omit({ id: true });
+export const CreateLocationSchema = LocationSchema.omit({
+  id: true,
+  deviceCount: true,
+});
 export const UpdateLocationSchema = CreateLocationSchema.partial();
+
+export const GetLocationDetailResponseSchema = LocationSchema.extend({
+  devices: z
+    .array(DeviceSchema)
+    .openapi({ description: 'Devices in this location' }),
+  children: z.array(LocationSchema).openapi({ description: 'Sub-locations' }),
+});

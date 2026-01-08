@@ -1,5 +1,5 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { LocationSchema } from '../location.schema';
+import { GetLocationDetailResponseSchema } from '../location.schema';
 
 export const getLocationRoute = createRoute({
   method: 'get',
@@ -15,7 +15,7 @@ export const getLocationRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: LocationSchema,
+          schema: GetLocationDetailResponseSchema,
         },
       },
       description: 'The location details',
