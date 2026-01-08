@@ -27,10 +27,11 @@ export function getAllIps(cidr: string): string[] {
     }
 
     // For other masks, typically exclude network and broadcast
-    // But maybe for smaller masks we should include them?
-    // Usually in scanning we skip .0 and .255 in a /24
+    // Also excluding .1 as it's usually the gateway
     for (let i = 1; i < numIps - 1; i++) {
-      ips.push(intToIp(startInt + i));
+      const ip = intToIp(startInt + i);
+      if (ip.endsWith('.1')) continue;
+      ips.push(ip);
     }
     return ips;
   } catch (e) {
