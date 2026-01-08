@@ -5,11 +5,13 @@ import {
   systemTable,
   ipAddrEntryTable,
   ipSnmpTable,
+  hikvisionTable,
 } from '@/db';
 import { eq, or, and } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { identifyDeviceRoute } from './identify.route';
+import { normalizeMac } from '@/lib/snmp';
 
 export const identifyDeviceHandler: RouteHandler<
   typeof identifyDeviceRoute
@@ -70,9 +72,9 @@ export const identifyDeviceHandler: RouteHandler<
 
     // 2. Buscar por MAC
     if (mac) {
-      const cleanMac = mac.replace(/[:.-]/g, '').toUpperCase();
-      let formattedMac = cleanMac.match(/.{1,2}/g)?.join(':');
+      const formattedMac = normalizeMac(mac);
 
+      // A. Buscar en la tabla de interfaces estándar
       const macMatch = await db
         .select({
           id: deviceTable.id,
@@ -92,6 +94,36 @@ export const identifyDeviceHandler: RouteHandler<
         );
 
       for (const d of macMatch) {
+        results.push({
+          id: d.id,
+          name: d.name,
+          managementIp: d.managementIp,
+          sysName: d.sysName,
+          matchType: 'mac_address',
+          matchedValue: d.matchedMac,
+        });
+      }
+
+      // B. Buscar en la tabla de Hikvision (por si no se detectó interfaz estándar)
+      const hikMacMatch = await db
+        .select({
+          id: deviceTable.id,
+          name: deviceTable.name,
+          managementIp: deviceTable.ipv4,
+          sysName: systemTable.sysName,
+          matchedMac: hikvisionTable.macAddr,
+        })
+        .from(hikvisionTable)
+        .innerJoin(deviceTable, eq(hikvisionTable.deviceId, deviceTable.id))
+        .leftJoin(systemTable, eq(deviceTable.id, systemTable.deviceId))
+        .where(
+          or(
+            eq(hikvisionTable.macAddr, formattedMac || ''),
+            eq(hikvisionTable.macAddr, mac.toUpperCase()),
+          ),
+        );
+
+      for (const d of hikMacMatch) {
         results.push({
           id: d.id,
           name: d.name,
