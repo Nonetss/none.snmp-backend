@@ -53,7 +53,7 @@ export function initScheduler() {
         );
 
       for (const rule of pendingRules) {
-        executeMonitorRule(rule.id);
+        executeMonitorRule(rule.id, now);
       }
     });
   });
@@ -101,12 +101,13 @@ async function updateNextRuns() {
 
 async function runTask(task: any) {
   logger.info(`[Scheduler] Starting task: ${task.name} (${task.type})`);
+  const taskStartTime = new Date();
 
   try {
     // Mark as running
     await db
       .update(taskScheduleTable)
-      .set({ status: 'running', lastRun: new Date() })
+      .set({ status: 'running', lastRun: taskStartTime })
       .where(eq(taskScheduleTable.id, task.id));
 
     if (task.type === 'SCAN_SUBNET' && task.targetId) {
@@ -120,9 +121,9 @@ async function runTask(task: any) {
     } else if (task.type === 'PING_ALL') {
       await pingAllDevices();
     } else if (task.type === 'MONITOR_ALL_RULES') {
-      await monitorAllRules();
+      await monitorAllRules(taskStartTime);
     } else if (task.type === 'MONITOR_RULE' && task.targetId) {
-      await executeMonitorRule(task.targetId);
+      await executeMonitorRule(task.targetId, taskStartTime);
     }
 
     // Calculate next run

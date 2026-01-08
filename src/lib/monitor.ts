@@ -15,7 +15,10 @@ import { CronExpressionParser as parser } from 'cron-parser';
 /**
  * Ejecuta una regla de monitorización específica.
  */
-export async function executeMonitorRule(ruleId: number) {
+export async function executeMonitorRule(
+  ruleId: number,
+  startTime: Date = new Date(),
+) {
   const [rule] = await db
     .select()
     .from(monitorRuleTable)
@@ -29,7 +32,7 @@ export async function executeMonitorRule(ruleId: number) {
     // 0. Marcar como ejecutando
     await db
       .update(monitorRuleTable)
-      .set({ status: 'running', lastRun: new Date() })
+      .set({ status: 'running', lastRun: startTime })
       .where(eq(monitorRuleTable.id, ruleId));
 
     // 1. Obtener dispositivos del grupo
@@ -54,7 +57,7 @@ export async function executeMonitorRule(ruleId: number) {
     }
 
     const results: any[] = [];
-    const checkTime = new Date();
+    const checkTime = startTime;
 
     // 3. Ejecutar comprobaciones
     for (const device of devices) {
@@ -121,7 +124,7 @@ export async function executeMonitorRule(ruleId: number) {
 /**
  * Ejecuta todas las reglas de monitorización habilitadas.
  */
-export async function monitorAllRules() {
+export async function monitorAllRules(startTime: Date = new Date()) {
   const rules = await db
     .select({ id: monitorRuleTable.id })
     .from(monitorRuleTable)
@@ -131,7 +134,7 @@ export async function monitorAllRules() {
 
   for (const rule of rules) {
     try {
-      await executeMonitorRule(rule.id);
+      await executeMonitorRule(rule.id, startTime);
     } catch (error) {
       logger.error(
         { error },
