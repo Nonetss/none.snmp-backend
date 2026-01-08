@@ -9,7 +9,7 @@ export const getRuleStatusHandler: RouteHandler<
 > = async (c) => {
   try {
     const { ruleId } = c.req.valid('param');
-    const { deviceId, from, to } = c.req.valid('query');
+    const { deviceId, port, from, to } = c.req.valid('query');
 
     const rule = await db.query.monitorRuleTable.findFirst({
       where: (fields, { eq }) => eq(fields.id, parseInt(ruleId)),
@@ -24,6 +24,7 @@ export const getRuleStatusHandler: RouteHandler<
           where: (fields, { and, eq, gte, lte }) => {
             const filters = [];
             if (deviceId) filters.push(eq(fields.deviceId, parseInt(deviceId)));
+            if (port) filters.push(eq(fields.port, parseInt(port)));
             if (from) filters.push(gte(fields.checkTime, new Date(from)));
             if (to) filters.push(lte(fields.checkTime, new Date(to)));
             return filters.length > 0 ? and(...filters) : undefined;
@@ -38,37 +39,39 @@ export const getRuleStatusHandler: RouteHandler<
       return c.json({ message: 'Rule not found' }, 404);
     }
 
-    const ports = rule.portGroup.items.map((item) => {
-      const devicesInGroup = rule.deviceGroup.devices.map((dg) => dg.device);
+    const ports = rule.portGroup.items
+      .filter((item) => (port ? item.port === parseInt(port) : true))
+      .map((item) => {
+        const devicesInGroup = rule.deviceGroup.devices.map((dg) => dg.device);
 
-      const devices = devicesInGroup
-        .filter((dev) => (deviceId ? dev.id === parseInt(deviceId) : true))
-        .map((dev) => {
-          const history = rule.results
-            .filter(
-              (r) => r.portGroupItemId === item.id && r.deviceId === dev.id,
-            )
-            .map((h) => ({
-              checkTime: h.checkTime.toISOString(),
-              status: h.status,
-              responseTime: h.responseTime,
-            }));
+        const devices = devicesInGroup
+          .filter((dev) => (deviceId ? dev.id === parseInt(deviceId) : true))
+          .map((dev) => {
+            const history = rule.results
+              .filter(
+                (r) => r.portGroupItemId === item.id && r.deviceId === dev.id,
+              )
+              .map((h) => ({
+                checkTime: h.checkTime.toISOString(),
+                status: h.status,
+                responseTime: h.responseTime,
+              }));
 
-          return {
-            id: dev.id,
-            name: dev.name,
-            ipv4: dev.ipv4,
-            history,
-          };
-        });
+            return {
+              id: dev.id,
+              name: dev.name,
+              ipv4: dev.ipv4,
+              history,
+            };
+          });
 
-      return {
-        portGroupItemId: item.id,
-        port: item.port,
-        expectedStatus: item.expectedStatus,
-        devices,
-      };
-    });
+        return {
+          portGroupItemId: item.id,
+          port: item.port,
+          expectedStatus: item.expectedStatus,
+          devices,
+        };
+      });
 
     return c.json(
       {
