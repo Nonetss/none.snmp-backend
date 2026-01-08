@@ -50,12 +50,10 @@ import { taskScheduleTable } from '@/db/models/taskSchedule.table';
 import {
   ntfyCredentialTable,
   ntfyTopicTable,
-} from '@/db/models/notifications/ntfy.table';
-import {
-  notificationActionTable,
   ntfyActionTable,
   ntfyActionTagTable,
-} from '@/db/models/notifications/notification.table';
+} from '@/db/models/notifications/ntfy.table';
+import { notificationActionTable } from '@/db/models/notifications/notification.table';
 import { lldpView } from '@/db/models/views/lldp.view';
 
 export {

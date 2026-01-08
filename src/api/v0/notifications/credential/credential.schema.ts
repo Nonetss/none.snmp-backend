@@ -16,9 +16,9 @@ export const CreateNtfyCredentialSchema = z.object({
     .optional()
     .default('https://ntfy.sh')
     .openapi({ example: 'https://ntfy.sh' }),
-  username: z.string().optional().openapi({ example: 'user' }),
-  password: z.string().optional().openapi({ example: 'password' }),
-  token: z.string().optional().openapi({ example: 'tk_123' }),
+  username: z.string().nullable().optional().openapi({ example: 'user' }),
+  password: z.string().nullable().optional().openapi({ example: 'password' }),
+  token: z.string().nullable().optional().openapi({ example: 'tk_123' }),
 });
 
 export const UpdateNtfyCredentialSchema = CreateNtfyCredentialSchema.partial();
