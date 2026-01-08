@@ -133,6 +133,56 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.monitorRuleTable.id,
       to: r.portStatusTable.ruleId,
     }),
+    notificationActions: r.many.notificationActionTable({
+      from: r.monitorRuleTable.id,
+      to: r.notificationActionTable.monitorRuleId,
+    }),
+  },
+  notificationActionTable: {
+    monitorRule: r.one.monitorRuleTable({
+      from: r.notificationActionTable.monitorRuleId,
+      to: r.monitorRuleTable.id,
+    }),
+    ntfyAction: r.one.ntfyActionTable({
+      from: r.notificationActionTable.id,
+      to: r.ntfyActionTable.notificationActionId,
+    }),
+  },
+  ntfyActionTable: {
+    notificationAction: r.one.notificationActionTable({
+      from: r.ntfyActionTable.notificationActionId,
+      to: r.notificationActionTable.id,
+    }),
+    topic: r.one.ntfyTopicTable({
+      from: r.ntfyActionTable.ntfyTopicId,
+      to: r.ntfyTopicTable.id,
+    }),
+    tags: r.many.ntfyActionTagTable({
+      from: r.ntfyActionTable.id,
+      to: r.ntfyActionTagTable.ntfyActionId,
+    }),
+  },
+  ntfyActionTagTable: {
+    ntfyAction: r.one.ntfyActionTable({
+      from: r.ntfyActionTagTable.ntfyActionId,
+      to: r.ntfyActionTable.id,
+    }),
+  },
+  ntfyCredentialTable: {
+    topics: r.many.ntfyTopicTable({
+      from: r.ntfyCredentialTable.id,
+      to: r.ntfyTopicTable.credentialId,
+    }),
+  },
+  ntfyTopicTable: {
+    credential: r.one.ntfyCredentialTable({
+      from: r.ntfyTopicTable.credentialId,
+      to: r.ntfyCredentialTable.id,
+    }),
+    ntfyActions: r.many.ntfyActionTable({
+      from: r.ntfyTopicTable.id,
+      to: r.ntfyActionTable.ntfyTopicId,
+    }),
   },
   portStatusTable: {
     device: r.one.deviceTable({

@@ -47,6 +47,15 @@ import { entityPhysicalTable } from '@/db/models/device/entity.table';
 import { routeTable } from '@/db/models/device/route.table';
 import { hikvisionTable } from '@/db/models/enterprise/hikvision.table';
 import { taskScheduleTable } from '@/db/models/taskSchedule.table';
+import {
+  ntfyCredentialTable,
+  ntfyTopicTable,
+} from '@/db/models/notifications/ntfy.table';
+import {
+  notificationActionTable,
+  ntfyActionTable,
+  ntfyActionTagTable,
+} from '@/db/models/notifications/notification.table';
 import { lldpView } from '@/db/models/views/lldp.view';
 
 export {
@@ -91,6 +100,13 @@ export {
   hikvisionTable,
   // Scheduler
   taskScheduleTable,
+
+  // Notifications
+  ntfyCredentialTable,
+  ntfyTopicTable,
+  notificationActionTable,
+  ntfyActionTable,
+  ntfyActionTagTable,
 
   // Locations
   locationTable,

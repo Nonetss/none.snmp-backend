@@ -8,6 +8,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { monitorGroupTable } from './monitorGroup.table';
 import { monitorPortGroupTable } from './monitorPortGroup.table';
+import { ntfyTopicTable } from '../notifications/ntfy.table';
 
 // Une un grupo de dispositivos con un grupo de puertos para monitorizar
 export const monitorRuleTable = pgTable('monitor_rule', {
@@ -29,4 +30,11 @@ export const monitorRuleTable = pgTable('monitor_rule', {
   nextRun: timestamp('next_run', { withTimezone: true }),
   status: varchar('status', { length: 20 }).default('idle'), // 'idle', 'running', 'error'
   lastResult: text('last_result'),
+
+  // Configuración de notificaciones
+  condition: varchar('condition', {
+    enum: ['down', 'up', 'change', 'always'],
+  })
+    .notNull()
+    .default('down'),
 });
