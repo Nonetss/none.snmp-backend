@@ -10,23 +10,23 @@ import { monitorAllRules, executeMonitorRule } from '@/lib/monitor';
 import { logger } from '@/lib/logger';
 
 export async function initScheduler() {
-  console.log('[Scheduler] Initializing...');
+  logger.info('[Scheduler] Initializing...');
 
   try {
     // 1. Resetear estados bloqueados
     await resetStuckTasks();
-    console.log('[Scheduler] Stuck tasks reset.');
+    logger.info('[Scheduler] Stuck tasks reset.');
 
     // 2. Inicializar next_run si falta
     await updateNextRuns();
-    console.log('[Scheduler] Next runs updated.');
+    logger.info('[Scheduler] Next runs updated.');
 
-    console.log('[Scheduler] Background tasks starting...');
+    logger.info('[Scheduler] Background tasks starting...');
 
     // Check every minute
     cron.schedule('* * * * *', async () => {
       const now = new Date();
-      console.log(`[Scheduler] Heartbeat at ${now.toISOString()}`);
+      logger.info(`[Scheduler] Heartbeat at ${now.toISOString()}`);
 
       try {
         // 1. Find tasks that need to run
@@ -75,18 +75,18 @@ export async function initScheduler() {
           executeMonitorRule(rule.id, now);
         }
       } catch (error) {
-        console.error('[Scheduler] Error in cron loop:', error);
+        logger.error({ error }, '[Scheduler] Error in cron loop');
       }
     });
 
-    console.log('[Scheduler] Cron scheduled successfully');
+    logger.info('[Scheduler] Cron scheduled successfully');
   } catch (error) {
-    console.error('[Scheduler] Failed to initialize scheduler:', error);
+    logger.error({ error }, '[Scheduler] Failed to initialize scheduler');
   }
 }
 
 async function updateNextRuns() {
-  console.log('[Scheduler] Updating next runs...');
+  logger.info('[Scheduler] Updating next runs...');
   // A. Para tareas generales
   const tasks = await db
     .select()
@@ -102,9 +102,7 @@ async function updateNextRuns() {
         .set({ nextRun })
         .where(eq(taskScheduleTable.id, task.id));
     } catch (e) {
-      console.error(
-        `[Scheduler] Invalid cron expression for task ${task.name}`,
-      );
+      logger.error(`[Scheduler] Invalid cron expression for task ${task.name}`);
     }
   }
 
@@ -123,15 +121,13 @@ async function updateNextRuns() {
         .set({ nextRun })
         .where(eq(monitorRuleTable.id, rule.id));
     } catch (e) {
-      console.error(
-        `[Scheduler] Invalid cron expression for rule ${rule.name}`,
-      );
+      logger.error(`[Scheduler] Invalid cron expression for rule ${rule.name}`);
     }
   }
 }
 
 async function resetStuckTasks() {
-  console.log('[Scheduler] Resetting stuck tasks...');
+  logger.info('[Scheduler] Resetting stuck tasks...');
   try {
     await db
       .update(taskScheduleTable)
@@ -143,7 +139,7 @@ async function resetStuckTasks() {
       .set({ status: 'idle' })
       .where(eq(monitorRuleTable.status, 'running'));
   } catch (error) {
-    console.error('[Scheduler] Failed to reset stuck tasks:', error);
+    logger.error({ error }, '[Scheduler] Failed to reset stuck tasks');
   }
 }
 

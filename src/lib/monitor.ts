@@ -29,7 +29,7 @@ export async function executeMonitorRule(
 
   if (!rule || !rule.enabled) return;
 
-  console.log(`[Monitor] Executing rule: ${rule.name}`);
+  logger.info(`[Monitor] Executing rule: ${rule.name}`);
 
   try {
     // 0. Marcar como ejecutando
@@ -59,7 +59,7 @@ export async function executeMonitorRule(
       .where(eq(monitorPortGroupItemTable.portGroupId, rule.portGroupId));
 
     if (devices.length === 0 || ports.length === 0) {
-      console.log(`[Monitor] Rule ${rule.name}: No devices or ports to check.`);
+      logger.info(`[Monitor] Rule ${rule.name}: No devices or ports to check.`);
       throw new Error('No devices or ports configured');
     }
 
@@ -108,11 +108,11 @@ export async function executeMonitorRule(
       })
       .where(eq(monitorRuleTable.id, ruleId));
 
-    console.log(
+    logger.info(
       `[Monitor] Rule ${rule.name} finished. ${results.length} checks performed.`,
     );
   } catch (error: any) {
-    console.error(`[Monitor] Rule ${rule.name} failed:`, error);
+    logger.error({ error }, `[Monitor] Rule ${rule.name} failed`);
 
     try {
       const interval = parser.parse(rule.cronExpression);
@@ -140,13 +140,16 @@ export async function monitorAllRules(startTime: Date = new Date()) {
     .from(monitorRuleTable)
     .where(eq(monitorRuleTable.enabled, true));
 
-  console.log(`[Monitor] Starting checks for ${rules.length} enabled rules.`);
+  logger.info(`[Monitor] Starting checks for ${rules.length} enabled rules.`);
 
   for (const rule of rules) {
     try {
       await executeMonitorRule(rule.id, startTime);
     } catch (error) {
-      console.error(`[Monitor] Failed to execute rule ID: ${rule.id}`, error);
+      logger.error(
+        { error },
+        `[Monitor] Failed to execute rule ID: ${rule.id}`,
+      );
     }
   }
 }
