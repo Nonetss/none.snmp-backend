@@ -15,19 +15,7 @@ export const listPortStatusHandler: RouteHandler<
         },
         deviceGroup: {
           with: {
-            devices: {
-              with: {
-                device: {
-                  with: {
-                    system: {
-                      columns: {
-                        sysName: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
+            devices: true,
           },
         },
         results: {
@@ -42,7 +30,10 @@ export const listPortStatusHandler: RouteHandler<
       // Usamos un Map para agrupar por DeviceId y dentro por Port
       const deviceMap = new Map<
         number,
-        Map<number, { status: boolean; checkTime: Date }[]>
+        Map<
+          number,
+          { status: boolean; checkTime: Date; responseTime: number | null }[]
+        >
       >();
 
       for (const curr of rule.results) {
@@ -62,6 +53,7 @@ export const listPortStatusHandler: RouteHandler<
         portMap.get(curr.port)!.push({
           status: curr.status,
           checkTime: curr.checkTime,
+          responseTime: curr.responseTime,
         });
       }
 

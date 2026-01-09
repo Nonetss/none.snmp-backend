@@ -45,20 +45,26 @@ export const PortStatusDataSchema = z
   .object({
     status: z.boolean().openapi({ example: true }),
     checkTime: z.date().openapi({ example: '2026-01-08T12:00:00Z' }),
+    responseTime: z
+      .number()
+      .nullable()
+      .openapi({ example: 120, description: 'Response time in milliseconds' }),
   })
   .openapi('PortStatusData');
 
 export const DeviceDataPortSchema = z
   .object({
     port: z.number().openapi({ example: 80 }),
-    statusData: z.array(PortStatusDataSchema),
+    history: z.array(PortStatusDataSchema),
   })
   .openapi('DeviceDataPort');
 
 export const GroupedPortStatusSchema = z
   .object({
     deviceId: z.number().openapi({ example: 1 }),
-    deviceDataPort: z.array(DeviceDataPortSchema),
+    ipv4: z.string().openapi({ example: '192.168.1.1' }),
+    deviceName: z.string().nullable().openapi({ example: 'Core-Switch' }),
+    ports: z.array(DeviceDataPortSchema),
   })
   .openapi('GroupedPortStatus');
 
@@ -93,13 +99,6 @@ export const RuleDetailsSchema = z
         z.object({
           groupId: z.number(),
           deviceId: z.number(),
-          device: z.object({
-            system: z
-              .object({
-                sysName: z.string().nullable(),
-              })
-              .nullable(),
-          }),
         }),
       ),
     }),
@@ -108,8 +107,8 @@ export const RuleDetailsSchema = z
 
 export const RuleStatusResponseSchema = z
   .object({
-    rule: RuleDetailsSchema,
     groupedData: z.array(GroupedPortStatusSchema),
+    rule: RuleDetailsSchema,
   })
   .openapi('RuleStatusResponse');
 

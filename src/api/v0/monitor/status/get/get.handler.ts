@@ -44,6 +44,7 @@ export const getRuleStatusHandler: RouteHandler<
         statusData: {
           status: boolean;
           checkTime: Date;
+          responseTime: number | null;
         }[]; // Ahora es un array
       }[];
     }
@@ -78,6 +79,7 @@ export const getRuleStatusHandler: RouteHandler<
         port: portStatusTable.port,
         status: portStatusTable.status,
         checkTime: portStatusTable.checkTime,
+        responseTime: portStatusTable.responseTime,
       })
       .from(portStatusTable)
       .where(and(...conditions))
@@ -86,7 +88,10 @@ export const getRuleStatusHandler: RouteHandler<
     // 1. Usamos un Map para agrupar por DeviceId y dentro por Port
     const deviceMap = new Map<
       number,
-      Map<number, { status: boolean; checkTime: Date }[]>
+      Map<
+        number,
+        { status: boolean; checkTime: Date; responseTime: number | null }[]
+      >
     >();
 
     for (const curr of rawPortData) {
@@ -106,6 +111,7 @@ export const getRuleStatusHandler: RouteHandler<
       portMap.get(curr.port)!.push({
         status: curr.status,
         checkTime: curr.checkTime,
+        responseTime: curr.responseTime,
       });
     }
 
