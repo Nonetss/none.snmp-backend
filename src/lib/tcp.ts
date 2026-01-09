@@ -53,6 +53,31 @@ export async function checkTcpPort(
 }
 
 /**
+ * Utility to process tasks with a concurrency limit using a worker pool.
+ */
+async function pool<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency: number,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let index = 0;
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (index < items.length) {
+        const i = index++;
+        results[i] = await fn(items[i]);
+      }
+    },
+  );
+
+  await Promise.all(workers);
+  return results;
+}
+
+/**
  * Escanea un rango de puertos o una lista específica de forma concurrente.
  */
 export async function scanPorts(
@@ -61,23 +86,17 @@ export async function scanPorts(
   concurrency = 100,
   timeout = 1000,
 ): Promise<{ port: number; time: number }[]> {
-  const openPorts: { port: number; time: number }[] = [];
+  const results = await pool(
+    ports,
+    async (port) => {
+      const res = await checkTcpPort(ip, port, timeout);
+      return { port, ...res };
+    },
+    concurrency,
+  );
 
-  for (let i = 0; i < ports.length; i += concurrency) {
-    const batch = ports.slice(i, i + concurrency);
-    const results = await Promise.all(
-      batch.map(async (port) => {
-        const res = await checkTcpPort(ip, port, timeout);
-        return { port, ...res };
-      }),
-    );
-
-    for (const res of results) {
-      if (res.open) {
-        openPorts.push({ port: res.port, time: res.time as number });
-      }
-    }
-  }
-
-  return openPorts.sort((a, b) => a.port - b.port);
+  return results
+    .filter((res) => res.open)
+    .map((res) => ({ port: res.port, time: res.time as number }))
+    .sort((a, b) => a.port - b.port);
 }
