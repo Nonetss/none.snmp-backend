@@ -1,6 +1,6 @@
 import { db } from '@/core/config';
-import { monitorRuleTable } from '@/db';
-import { eq, and, gte, lte } from 'drizzle-orm';
+import { monitorRuleTable, portStatusTable } from '@/db';
+import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getRuleStatusRoute } from './get.route';
 
@@ -20,24 +20,29 @@ export const getRuleStatusHandler: RouteHandler<
         deviceGroup: {
           with: { devices: { with: { device: true } } },
         },
-        results: {
-          where: (fields, { and, eq, gte, lte }) => {
-            const filters = [];
-            if (deviceId) filters.push(eq(fields.deviceId, parseInt(deviceId)));
-            if (port) filters.push(eq(fields.port, parseInt(port)));
-            if (from) filters.push(gte(fields.checkTime, new Date(from)));
-            if (to) filters.push(lte(fields.checkTime, new Date(to)));
-            return filters.length > 0 ? and(...filters) : undefined;
-          },
-          orderBy: (fields, { desc }) => [desc(fields.checkTime)],
-          with: { device: true },
-        },
       },
     });
 
     if (!rule) {
       return c.json({ message: 'Rule not found' }, 404);
     }
+
+    // Obtener los resultados filtrados de forma explícita para evitar problemas con el API relacional
+    const results = await db
+      .select()
+      .from(portStatusTable)
+      .where(
+        and(
+          eq(portStatusTable.ruleId, rule.id),
+          deviceId
+            ? eq(portStatusTable.deviceId, parseInt(deviceId))
+            : undefined,
+          port ? eq(portStatusTable.port, parseInt(port)) : undefined,
+          from ? gte(portStatusTable.checkTime, new Date(from)) : undefined,
+          to ? lte(portStatusTable.checkTime, new Date(to)) : undefined,
+        ),
+      )
+      .orderBy(desc(portStatusTable.checkTime));
 
     const ports = rule.portGroup.items
       .filter((item) => (port ? item.port === parseInt(port) : true))
@@ -47,7 +52,7 @@ export const getRuleStatusHandler: RouteHandler<
         const devices = devicesInGroup
           .filter((dev) => (deviceId ? dev.id === parseInt(deviceId) : true))
           .map((dev) => {
-            const history = rule.results
+            const history = results
               .filter(
                 (r) => r.portGroupItemId === item.id && r.deviceId === dev.id,
               )
