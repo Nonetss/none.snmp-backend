@@ -1,15 +1,18 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { postNotificationActionRoute } from '@/api/v0/notifications/action/post/post.route';
-import { postNotificationActionHandler } from '@/api/v0/notifications/action/post/post.handler';
-import { postNtfyActionRoute } from '@/api/v0/notifications/action/ntfy/post/post.route';
-import { postNtfyActionHandler } from '@/api/v0/notifications/action/ntfy/post/post.handler';
+import listRouter from './list/index';
+import getRouter from './get/index';
+import postRouter from './post/index';
+import patchRouter from './patch/index';
+import deleteRouter from './delete/index';
+import ntfyRouter from './ntfy/index';
 
 const actionRouter = new OpenAPIHono();
 
-actionRouter.openapi(
-  postNotificationActionRoute,
-  postNotificationActionHandler,
-);
-actionRouter.openapi(postNtfyActionRoute, postNtfyActionHandler);
+actionRouter.route('/ntfy', ntfyRouter);
+actionRouter.route('/', listRouter);
+actionRouter.route('/', getRouter);
+actionRouter.route('/', postRouter);
+actionRouter.route('/', patchRouter);
+actionRouter.route('/', deleteRouter);
 
 export default actionRouter;

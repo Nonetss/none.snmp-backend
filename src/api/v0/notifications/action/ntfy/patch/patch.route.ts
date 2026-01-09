@@ -1,31 +1,36 @@
 import { createRoute } from '@hono/zod-openapi';
 import {
   NtfyActionSchema,
-  CreateNtfyActionSchema,
-} from '@/api/v0/notifications/action/action.schema';
+  UpdateNtfyActionSchema,
+  NtfyActionIdParamSchema,
+} from '../../action.schema';
 
-export const postNtfyActionRoute = createRoute({
-  method: 'post',
-  path: '/',
-  summary: 'Configure ntfy for an action',
+export const patchNtfyActionRoute = createRoute({
+  method: 'patch',
+  path: '/{id}',
+  summary: 'Update ntfy configuration',
   tags: ['Notifications Action'],
   request: {
+    params: NtfyActionIdParamSchema,
     body: {
       content: {
         'application/json': {
-          schema: CreateNtfyActionSchema,
+          schema: UpdateNtfyActionSchema,
         },
       },
     },
   },
   responses: {
-    201: {
+    200: {
       content: {
         'application/json': {
           schema: NtfyActionSchema,
         },
       },
-      description: 'Ntfy action configured',
+      description: 'Ntfy configuration updated',
+    },
+    404: {
+      description: 'Ntfy action not found',
     },
     500: {
       description: 'Internal Server Error',

@@ -46,13 +46,22 @@ export const NotificationActionIdParamSchema = z.object({
     .openapi({ param: { name: 'id', in: 'path' }, example: 1 }),
 });
 
-// Ntfy Action Schema (Separate CRUD or nested?)
+export const NtfyActionIdParamSchema = z.object({
+  id: z.coerce
+    .number()
+    .openapi({ param: { name: 'id', in: 'path' }, example: 1 }),
+});
+
 export const NtfyActionSchema = z.object({
   id: z.number().openapi({ example: 1 }),
   notificationActionId: z.number().openapi({ example: 1 }),
   ntfyTopicId: z.number().nullable().openapi({ example: 5 }),
   title: z.string().nullable().openapi({ example: 'Alert' }),
   priority: z.number().nullable().openapi({ example: 4 }),
+});
+
+export const NotificationActionFullSchema = NotificationActionSchema.extend({
+  ntfyAction: NtfyActionSchema.nullable().optional(),
 });
 
 export const CreateNtfyActionSchema = z.object({
@@ -65,3 +74,5 @@ export const CreateNtfyActionSchema = z.object({
     .optional()
     .openapi({ example: ['warning', 'network'] }),
 });
+
+export const UpdateNtfyActionSchema = CreateNtfyActionSchema.partial();
