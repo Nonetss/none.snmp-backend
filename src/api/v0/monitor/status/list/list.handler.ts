@@ -14,7 +14,21 @@ export const listPortStatusHandler: RouteHandler<
           with: { items: true },
         },
         deviceGroup: {
-          with: { devices: true },
+          with: {
+            devices: {
+              with: {
+                device: {
+                  with: {
+                    system: {
+                      columns: {
+                        sysName: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         results: {
           limit: 100,

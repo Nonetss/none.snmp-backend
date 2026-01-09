@@ -93,6 +93,13 @@ export const RuleDetailsSchema = z
         z.object({
           groupId: z.number(),
           deviceId: z.number(),
+          device: z.object({
+            system: z
+              .object({
+                sysName: z.string().nullable(),
+              })
+              .nullable(),
+          }),
         }),
       ),
     }),
