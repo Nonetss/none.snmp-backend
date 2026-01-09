@@ -55,7 +55,7 @@ async function initialize() {
     await seedDefaultTasks();
 
     // Initialize background scheduler
-    initScheduler();
+    await initScheduler();
   } catch (err) {
     pinoLogger.error({ err }, '[Seed] Critical error during initialization');
   }

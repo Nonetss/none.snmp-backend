@@ -9,57 +9,84 @@ import { pingAllDevices } from '@/lib/ping';
 import { monitorAllRules, executeMonitorRule } from '@/lib/monitor';
 import { logger } from '@/lib/logger';
 
-export function initScheduler() {
-  logger.info('[Scheduler] Initializing...');
+export async function initScheduler() {
+  console.log('[Scheduler] Initializing...');
 
-  // Correr inmediatamente al arrancar para inicializar el next_run de las tareas que no lo tengan
-  updateNextRuns().then(() => {
+  try {
+    // 1. Resetear estados bloqueados
+    await resetStuckTasks();
+    console.log('[Scheduler] Stuck tasks reset.');
+
+    // 2. Inicializar next_run si falta
+    await updateNextRuns();
+    console.log('[Scheduler] Next runs updated.');
+
+    console.log('[Scheduler] Background tasks starting...');
+
     // Check every minute
     cron.schedule('* * * * *', async () => {
       const now = new Date();
+      console.log(`[Scheduler] Heartbeat at ${now.toISOString()}`);
 
-      // 1. Find tasks that need to run
-      const pendingTasks = await db
-        .select()
-        .from(taskScheduleTable)
-        .where(
-          and(
-            eq(taskScheduleTable.enabled, true),
-            or(
-              isNull(taskScheduleTable.nextRun),
-              lt(taskScheduleTable.nextRun, now),
+      try {
+        // 1. Find tasks that need to run
+        const pendingTasks = await db
+          .select()
+          .from(taskScheduleTable)
+          .where(
+            and(
+              eq(taskScheduleTable.enabled, true),
+              or(
+                isNull(taskScheduleTable.nextRun),
+                lt(taskScheduleTable.nextRun, now),
+              ),
+              eq(taskScheduleTable.status, 'idle'),
             ),
-            eq(taskScheduleTable.status, 'idle'),
-          ),
-        );
+          );
 
-      for (const task of pendingTasks) {
-        runTask(task);
-      }
+        if (pendingTasks.length > 0) {
+          logger.info(`[Scheduler] Found ${pendingTasks.length} pending tasks`);
+        }
 
-      // 2. Find monitor rules that need to run
-      const pendingRules = await db
-        .select()
-        .from(monitorRuleTable)
-        .where(
-          and(
-            eq(monitorRuleTable.enabled, true),
-            or(
-              isNull(monitorRuleTable.nextRun),
-              lt(monitorRuleTable.nextRun, now),
+        for (const task of pendingTasks) {
+          runTask(task);
+        }
+
+        // 2. Find monitor rules that need to run
+        const pendingRules = await db
+          .select()
+          .from(monitorRuleTable)
+          .where(
+            and(
+              eq(monitorRuleTable.enabled, true),
+              or(
+                isNull(monitorRuleTable.nextRun),
+                lt(monitorRuleTable.nextRun, now),
+              ),
+              eq(monitorRuleTable.status, 'idle'),
             ),
-            eq(monitorRuleTable.status, 'idle'),
-          ),
-        );
+          );
 
-      for (const rule of pendingRules) {
-        executeMonitorRule(rule.id, now);
+        if (pendingRules.length > 0) {
+          logger.info(`[Scheduler] Found ${pendingRules.length} pending rules`);
+        }
+
+        for (const rule of pendingRules) {
+          executeMonitorRule(rule.id, now);
+        }
+      } catch (error) {
+        console.error('[Scheduler] Error in cron loop:', error);
       }
     });
-  });
+
+    console.log('[Scheduler] Cron scheduled successfully');
+  } catch (error) {
+    console.error('[Scheduler] Failed to initialize scheduler:', error);
+  }
 }
 
 async function updateNextRuns() {
+  console.log('[Scheduler] Updating next runs...');
   // A. Para tareas generales
   const tasks = await db
     .select()
@@ -75,7 +102,9 @@ async function updateNextRuns() {
         .set({ nextRun })
         .where(eq(taskScheduleTable.id, task.id));
     } catch (e) {
-      logger.error(`[Scheduler] Invalid cron expression for task ${task.name}`);
+      console.error(
+        `[Scheduler] Invalid cron expression for task ${task.name}`,
+      );
     }
   }
 
@@ -94,8 +123,27 @@ async function updateNextRuns() {
         .set({ nextRun })
         .where(eq(monitorRuleTable.id, rule.id));
     } catch (e) {
-      logger.error(`[Scheduler] Invalid cron expression for rule ${rule.name}`);
+      console.error(
+        `[Scheduler] Invalid cron expression for rule ${rule.name}`,
+      );
     }
+  }
+}
+
+async function resetStuckTasks() {
+  console.log('[Scheduler] Resetting stuck tasks...');
+  try {
+    await db
+      .update(taskScheduleTable)
+      .set({ status: 'idle' })
+      .where(eq(taskScheduleTable.status, 'running'));
+
+    await db
+      .update(monitorRuleTable)
+      .set({ status: 'idle' })
+      .where(eq(monitorRuleTable.status, 'running'));
+  } catch (error) {
+    console.error('[Scheduler] Failed to reset stuck tasks:', error);
   }
 }
 
