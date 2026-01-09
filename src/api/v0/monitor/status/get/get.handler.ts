@@ -17,93 +17,88 @@ export const getRuleStatusHandler: RouteHandler<
     }
 
     // Usar una consulta select directa para evitar cualquier comportamiento inesperado de findFirst
-    const [rule] = await db
-      .select()
-      .from(monitorRuleTable)
-      .where(eq(monitorRuleTable.id, ruleId));
-
-    if (!rule) {
-      return c.json({ message: 'Rule not found' }, 404);
-    }
-
-    // Obtener grupos por separado para tener control total
-    const portGroup = await db.query.monitorPortGroupTable.findFirst({
-      where: (fields, { eq }) => eq(fields.id, rule.portGroupId),
-      with: { items: true },
+    const rule = await db.query.monitorRuleTable.findFirst({
+      where: {
+        id: {
+          eq: ruleId,
+        },
+      },
+      with: {
+        portGroup: {
+          with: {
+            items: true,
+          },
+        },
+        deviceGroup: {
+          with: {
+            devices: true,
+          },
+        },
+      },
     });
 
-    const deviceGroup = await db.query.monitorGroupTable.findFirst({
-      where: (fields, { eq }) => eq(fields.id, rule.deviceGroupId),
-      with: { devices: { with: { device: true } } },
-    });
-
-    if (!portGroup || !deviceGroup) {
-      return c.json({ message: 'Configuration for rule is missing' }, 500);
+    interface PortStatus {
+      deviceId: number;
+      deviceDataPort: {
+        port: number;
+        statusData: {
+          status: boolean;
+          checkTime: Date;
+        }[]; // Ahora es un array
+      }[];
     }
 
-    // Obtener los resultados filtrados de forma explícita
-    const results = await db
-      .select()
+    const rawPortData = await db
+      .select({
+        deviceId: portStatusTable.deviceId,
+        port: portStatusTable.port,
+        status: portStatusTable.status,
+        checkTime: portStatusTable.checkTime,
+      })
       .from(portStatusTable)
-      .where(
-        and(
-          eq(portStatusTable.ruleId, rule.id),
-          deviceId
-            ? eq(portStatusTable.deviceId, parseInt(deviceId))
-            : undefined,
-          port ? eq(portStatusTable.port === parseInt(port)) : undefined,
-          from ? gte(portStatusTable.checkTime, new Date(from)) : undefined,
-          to ? lte(portStatusTable.checkTime, new Date(to)) : undefined,
-        ),
-      )
+      .where(eq(portStatusTable.ruleId, ruleId))
       .orderBy(desc(portStatusTable.checkTime));
 
-    const ports = portGroup.items
-      .filter((item) => (port ? item.port === parseInt(port) : true))
-      .map((item) => {
-        const devicesInGroup = deviceGroup.devices.map((dg) => dg.device);
+    // 1. Usamos un Map para agrupar por DeviceId y dentro por Port
+    const deviceMap = new Map<
+      number,
+      Map<number, { status: boolean; checkTime: Date }[]>
+    >();
 
-        const devices = devicesInGroup
-          .filter((dev) => (deviceId ? dev.id === parseInt(deviceId) : true))
-          .map((dev) => {
-            const history = results
-              .filter(
-                (r) => r.portGroupItemId === item.id && r.deviceId === dev.id,
-              )
-              .map((h) => ({
-                checkTime: h.checkTime.toISOString(),
-                status: h.status,
-                responseTime: h.responseTime,
-              }));
+    for (const curr of rawPortData) {
+      // Inicializar el Map del dispositivo si no existe
+      if (!deviceMap.has(curr.deviceId)) {
+        deviceMap.set(curr.deviceId, new Map());
+      }
 
-            return {
-              id: dev.id,
-              name: dev.name,
-              ipv4: dev.ipv4,
-              history,
-            };
-          });
+      const portMap = deviceMap.get(curr.deviceId)!;
 
-        return {
-          portGroupItemId: item.id,
-          port: item.port,
-          expectedStatus: item.expectedStatus,
-          devices,
-        };
+      // Inicializar el array del puerto si no existe
+      if (!portMap.has(curr.port)) {
+        portMap.set(curr.port, []);
+      }
+
+      // Empujar el estado al histórico de ese puerto
+      portMap.get(curr.port)!.push({
+        status: curr.status,
+        checkTime: curr.checkTime,
       });
+    }
 
-    return c.json(
-      {
-        id: rule.id,
-        name: rule.name,
-        enabled: rule.enabled,
-        cronExpression: rule.cronExpression,
-        lastRun: rule.lastRun?.toISOString() || null,
-        status: rule.status,
-        ports,
-      },
-      200,
+    // 2. Transformar los Maps anidados a la estructura de arrays final
+    const groupedData: PortStatus[] = Array.from(deviceMap.entries()).map(
+      ([deviceId, portMap]) => ({
+        deviceId,
+        deviceDataPort: Array.from(portMap.entries()).map(
+          ([port, statusData]) => ({
+            port,
+            statusData, // Este ya es el array de estados agrupados
+          }),
+        ),
+      }),
     );
+
+    return c.json({ rule, groupedData }, 200);
   } catch (error) {
     console.error('[Get Rule Status] Error:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;
