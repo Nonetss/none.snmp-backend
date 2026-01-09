@@ -14,56 +14,62 @@ export const listPortStatusHandler: RouteHandler<
           with: { items: true },
         },
         deviceGroup: {
-          with: { devices: { with: { device: true } } },
+          with: { devices: true },
         },
         results: {
           limit: 100,
           orderBy: (fields, { desc }) => [desc(fields.checkTime)],
-          with: { device: true },
         },
       },
     });
 
-    // 2. Agrupar los datos para la respuesta
+    // 2. Agrupar los datos para la respuesta (usando la lógica eficiente del Get)
     const response = rulesData.map((rule) => {
-      const ports = rule.portGroup.items.map((item) => {
-        const devicesInGroup = rule.deviceGroup.devices.map((dg) => dg.device);
+      // Usamos un Map para agrupar por DeviceId y dentro por Port
+      const deviceMap = new Map<
+        number,
+        Map<number, { status: boolean; checkTime: Date }[]>
+      >();
 
-        const devices = devicesInGroup.map((dev) => {
-          const history = rule.results
-            .filter(
-              (r) => r.portGroupItemId === item.id && r.deviceId === dev.id,
-            )
-            .map((h) => ({
-              checkTime: h.checkTime.toISOString(),
-              status: h.status,
-              responseTime: h.responseTime,
-            }));
+      for (const curr of rule.results) {
+        // Inicializar el Map del dispositivo si no existe
+        if (!deviceMap.has(curr.deviceId)) {
+          deviceMap.set(curr.deviceId, new Map());
+        }
 
-          return {
-            id: dev.id,
-            name: dev.name,
-            ipv4: dev.ipv4,
-            history,
-          };
+        const portMap = deviceMap.get(curr.deviceId)!;
+
+        // Inicializar el array del puerto si no existe
+        if (!portMap.has(curr.port)) {
+          portMap.set(curr.port, []);
+        }
+
+        // Empujar el estado al histórico de ese puerto
+        portMap.get(curr.port)!.push({
+          status: curr.status,
+          checkTime: curr.checkTime,
         });
+      }
 
-        return {
-          portGroupItemId: item.id,
-          port: item.port,
-          expectedStatus: item.expectedStatus,
-          devices,
-        };
-      });
+      // Transformar los Maps anidados a la estructura de arrays final
+      const groupedData = Array.from(deviceMap.entries()).map(
+        ([deviceId, portMap]) => ({
+          deviceId,
+          deviceDataPort: Array.from(portMap.entries()).map(
+            ([port, statusData]) => ({
+              port,
+              statusData,
+            }),
+          ),
+        }),
+      );
+
+      // Separar los resultados de la regla para coincidir con el esquema RuleDetails
+      const { results, ...ruleDetails } = rule;
 
       return {
-        id: rule.id,
-        name: rule.name,
-        enabled: rule.enabled,
-        cronExpression: rule.cronExpression,
-        lastRun: rule.lastRun?.toISOString() || null,
-        status: rule.status,
-        ports,
+        rule: ruleDetails,
+        groupedData,
       };
     });
 

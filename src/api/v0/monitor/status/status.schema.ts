@@ -105,3 +105,5 @@ export const RuleStatusResponseSchema = z
     groupedData: z.array(GroupedPortStatusSchema),
   })
   .openapi('RuleStatusResponse');
+
+export const RuleStatusListResponseSchema = z.array(RuleStatusResponseSchema);
