@@ -1,6 +1,6 @@
 import { db } from '@/core/config';
 import { monitorRuleTable, portStatusTable } from '@/db';
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, inArray } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getRuleStatusRoute } from './get.route';
 
@@ -37,6 +37,12 @@ export const getRuleStatusHandler: RouteHandler<
       },
     });
 
+    if (!rule) {
+      return c.json({ message: 'Rule not found' }, 404);
+    }
+
+    const allowedPorts = rule.portGroup?.items.map((i) => i.port) || [];
+
     interface PortStatus {
       deviceId: number;
       deviceDataPort: {
@@ -50,6 +56,12 @@ export const getRuleStatusHandler: RouteHandler<
     }
 
     const conditions = [eq(portStatusTable.ruleId, ruleId)];
+
+    if (allowedPorts.length > 0) {
+      conditions.push(inArray(portStatusTable.port, allowedPorts));
+    } else {
+      return c.json({ rule, groupedData: [] }, 200);
+    }
 
     if (deviceId) {
       const parsedDeviceId = parseInt(deviceId);
