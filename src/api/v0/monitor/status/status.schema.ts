@@ -39,3 +39,69 @@ export const RuleStatusHistorySchema = z
   .openapi('RuleStatusHistory');
 
 export const RuleStatusHistoryListSchema = z.array(RuleStatusHistorySchema);
+
+// New Schemas for optimized Get Rule Status
+export const PortStatusDataSchema = z
+  .object({
+    status: z.boolean().openapi({ example: true }),
+    checkTime: z.date().openapi({ example: '2026-01-08T12:00:00Z' }),
+  })
+  .openapi('PortStatusData');
+
+export const DeviceDataPortSchema = z
+  .object({
+    port: z.number().openapi({ example: 80 }),
+    statusData: z.array(PortStatusDataSchema),
+  })
+  .openapi('DeviceDataPort');
+
+export const GroupedPortStatusSchema = z
+  .object({
+    deviceId: z.number().openapi({ example: 1 }),
+    deviceDataPort: z.array(DeviceDataPortSchema),
+  })
+  .openapi('GroupedPortStatus');
+
+export const RuleDetailsSchema = z
+  .object({
+    id: z.number().openapi({ example: 1 }),
+    name: z.string().openapi({ example: 'Web Servers Health' }),
+    deviceGroupId: z.number().openapi({ example: 1 }),
+    portGroupId: z.number().openapi({ example: 1 }),
+    enabled: z.boolean().openapi({ example: true }),
+    cronExpression: z.string().openapi({ example: '*/5 * * * *' }),
+    lastRun: z.date().nullable().openapi({ example: '2026-01-08T12:00:00Z' }),
+    nextRun: z.date().nullable().openapi({ example: '2026-01-08T12:05:00Z' }),
+    status: z.string().nullable().openapi({ example: 'idle' }),
+    lastResult: z.string().nullable(),
+    condition: z.string().openapi({ example: 'down' }),
+    portGroup: z.object({
+      id: z.number(),
+      name: z.string(),
+      items: z.array(
+        z.object({
+          id: z.number(),
+          port: z.number(),
+          expectedStatus: z.boolean(),
+        }),
+      ),
+    }),
+    deviceGroup: z.object({
+      id: z.number(),
+      name: z.string(),
+      devices: z.array(
+        z.object({
+          groupId: z.number(),
+          deviceId: z.number(),
+        }),
+      ),
+    }),
+  })
+  .openapi('RuleDetails');
+
+export const RuleStatusResponseSchema = z
+  .object({
+    rule: RuleDetailsSchema,
+    groupedData: z.array(GroupedPortStatusSchema),
+  })
+  .openapi('RuleStatusResponse');
