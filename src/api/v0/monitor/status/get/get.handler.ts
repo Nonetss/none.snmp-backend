@@ -48,6 +48,30 @@ export const getRuleStatusHandler: RouteHandler<
       }[];
     }
 
+    const conditions = [eq(portStatusTable.ruleId, ruleId)];
+
+    if (deviceId) {
+      const parsedDeviceId = parseInt(deviceId);
+      if (!isNaN(parsedDeviceId)) {
+        conditions.push(eq(portStatusTable.deviceId, parsedDeviceId));
+      }
+    }
+
+    if (port) {
+      const parsedPort = parseInt(port);
+      if (!isNaN(parsedPort)) {
+        conditions.push(eq(portStatusTable.port, parsedPort));
+      }
+    }
+
+    if (from) {
+      conditions.push(gte(portStatusTable.checkTime, new Date(from)));
+    }
+
+    if (to) {
+      conditions.push(lte(portStatusTable.checkTime, new Date(to)));
+    }
+
     const rawPortData = await db
       .select({
         deviceId: portStatusTable.deviceId,
@@ -56,7 +80,7 @@ export const getRuleStatusHandler: RouteHandler<
         checkTime: portStatusTable.checkTime,
       })
       .from(portStatusTable)
-      .where(eq(portStatusTable.ruleId, ruleId))
+      .where(and(...conditions))
       .orderBy(desc(portStatusTable.checkTime));
 
     // 1. Usamos un Map para agrupar por DeviceId y dentro por Port
