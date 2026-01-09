@@ -8,26 +8,40 @@ export const getRuleStatusHandler: RouteHandler<
   typeof getRuleStatusRoute
 > = async (c) => {
   try {
-    const { ruleId } = c.req.valid('param');
+    const { ruleId: ruleIdStr } = c.req.valid('param');
     const { deviceId, port, from, to } = c.req.valid('query');
+    const ruleId = parseInt(ruleIdStr);
 
-    const rule = await db.query.monitorRuleTable.findFirst({
-      where: (fields, { eq }) => eq(fields.id, parseInt(ruleId)),
-      with: {
-        portGroup: {
-          with: { items: true },
-        },
-        deviceGroup: {
-          with: { devices: { with: { device: true } } },
-        },
-      },
-    });
+    if (isNaN(ruleId)) {
+      return c.json({ message: 'Invalid rule ID' }, 400);
+    }
+
+    // Usar una consulta select directa para evitar cualquier comportamiento inesperado de findFirst
+    const [rule] = await db
+      .select()
+      .from(monitorRuleTable)
+      .where(eq(monitorRuleTable.id, ruleId));
 
     if (!rule) {
       return c.json({ message: 'Rule not found' }, 404);
     }
 
-    // Obtener los resultados filtrados de forma explícita para evitar problemas con el API relacional
+    // Obtener grupos por separado para tener control total
+    const portGroup = await db.query.monitorPortGroupTable.findFirst({
+      where: (fields, { eq }) => eq(fields.id, rule.portGroupId),
+      with: { items: true },
+    });
+
+    const deviceGroup = await db.query.monitorGroupTable.findFirst({
+      where: (fields, { eq }) => eq(fields.id, rule.deviceGroupId),
+      with: { devices: { with: { device: true } } },
+    });
+
+    if (!portGroup || !deviceGroup) {
+      return c.json({ message: 'Configuration for rule is missing' }, 500);
+    }
+
+    // Obtener los resultados filtrados de forma explícita
     const results = await db
       .select()
       .from(portStatusTable)
@@ -37,17 +51,17 @@ export const getRuleStatusHandler: RouteHandler<
           deviceId
             ? eq(portStatusTable.deviceId, parseInt(deviceId))
             : undefined,
-          port ? eq(portStatusTable.port, parseInt(port)) : undefined,
+          port ? eq(portStatusTable.port === parseInt(port)) : undefined,
           from ? gte(portStatusTable.checkTime, new Date(from)) : undefined,
           to ? lte(portStatusTable.checkTime, new Date(to)) : undefined,
         ),
       )
       .orderBy(desc(portStatusTable.checkTime));
 
-    const ports = rule.portGroup.items
+    const ports = portGroup.items
       .filter((item) => (port ? item.port === parseInt(port) : true))
       .map((item) => {
-        const devicesInGroup = rule.deviceGroup.devices.map((dg) => dg.device);
+        const devicesInGroup = deviceGroup.devices.map((dg) => dg.device);
 
         const devices = devicesInGroup
           .filter((dev) => (deviceId ? dev.id === parseInt(deviceId) : true))
