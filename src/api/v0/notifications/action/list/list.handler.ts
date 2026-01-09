@@ -9,10 +9,27 @@ export const listNotificationActionsHandler: RouteHandler<
   try {
     const actions = await db.query.notificationActionTable.findMany({
       with: {
-        ntfyAction: true,
+        ntfyAction: {
+          with: {
+            tags: true,
+            topic: true,
+          },
+        },
       },
     });
-    return c.json(actions, 200);
+
+    // Mapear tags para que sean un array de strings en la respuesta
+    const formattedActions = actions.map((action) => ({
+      ...action,
+      ntfyAction: action.ntfyAction
+        ? {
+            ...action.ntfyAction,
+            tags: action.ntfyAction.tags.map((t: any) => t.tag),
+          }
+        : null,
+    }));
+
+    return c.json(formattedActions, 200);
   } catch (error) {
     console.error('Error listing notification actions:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;

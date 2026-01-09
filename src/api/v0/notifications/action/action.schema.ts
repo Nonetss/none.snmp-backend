@@ -58,6 +58,10 @@ export const NtfyActionSchema = z.object({
   ntfyTopicId: z.number().nullable().openapi({ example: 5 }),
   title: z.string().nullable().openapi({ example: 'Alert' }),
   priority: z.number().nullable().openapi({ example: 4 }),
+  tags: z
+    .array(z.string())
+    .optional()
+    .openapi({ example: ['warning', 'network'] }),
 });
 
 export const NotificationActionFullSchema = NotificationActionSchema.extend({
