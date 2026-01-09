@@ -1,7 +1,7 @@
 import { pgTable, integer, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { deviceTable } from '@/db/models/device/device.table';
-import { monitorRuleTable } from './monitorRule.table';
-import { monitorPortGroupItemTable } from './monitorPortGroup.table';
+import { monitorRuleTable } from '@/db/models/monitor/monitorRule.table';
+import { monitorPortGroupItemTable } from '@/db/models/monitor/monitorPortGroup.table';
 
 // Histórico de resultados de monitorización
 export const portStatusTable = pgTable('port_status', {

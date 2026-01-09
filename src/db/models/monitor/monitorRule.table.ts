@@ -6,9 +6,8 @@ import {
   timestamp,
   text,
 } from 'drizzle-orm/pg-core';
-import { monitorGroupTable } from './monitorGroup.table';
-import { monitorPortGroupTable } from './monitorPortGroup.table';
-import { ntfyTopicTable } from '../notifications/ntfy.table';
+import { monitorGroupTable } from '@/db/models/monitor/monitorGroup.table';
+import { monitorPortGroupTable } from '@/db/models/monitor/monitorPortGroup.table';
 
 // Une un grupo de dispositivos con un grupo de puertos para monitorizar
 export const monitorRuleTable = pgTable('monitor_rule', {
