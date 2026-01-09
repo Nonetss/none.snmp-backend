@@ -13,7 +13,7 @@ import { checkTcpPort } from '@/lib/tcp';
 import { logger } from '@/lib/logger';
 import { chunkArray } from '@/lib/db';
 import { CronExpressionParser as parser } from 'cron-parser';
-import { processNtfyAction } from './notifications/ntfy';
+import { processNtfyAction } from '@/lib/notifications/ntfy';
 
 /**
  * Ejecuta una regla de monitorización específica.
