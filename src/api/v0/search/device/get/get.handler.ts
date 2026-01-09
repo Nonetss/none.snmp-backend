@@ -23,6 +23,7 @@ import {
   hikvisionTable,
   subnetTable,
   snmpAuthTable,
+  locationTable,
 } from '@/db';
 import { eq, or, inArray, desc, sql } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
@@ -160,7 +161,7 @@ export const getDeviceSearchHandler: RouteHandler<
         const device = deviceRow[0];
         if (!device) return null;
 
-        const [subnetRow, snmpAuthRow] = await Promise.all([
+        const [subnetRow, snmpAuthRow, locationRow] = await Promise.all([
           db
             .select()
             .from(subnetTable)
@@ -170,6 +171,12 @@ export const getDeviceSearchHandler: RouteHandler<
                 .select()
                 .from(snmpAuthTable)
                 .where(eq(snmpAuthTable.id, device.snmpAuthId))
+            : Promise.resolve([]),
+          device.locationId
+            ? db
+                .select()
+                .from(locationTable)
+                .where(eq(locationTable.id, device.locationId))
             : Promise.resolve([]),
         ]);
 
@@ -290,6 +297,7 @@ export const getDeviceSearchHandler: RouteHandler<
           ...device,
           subnet: subnetRow[0] || null,
           snmpAuth: snmpAuthRow[0] || null,
+          location: locationRow[0] || null,
           system: system
             ? { ...system, sysUpTime: system.sysUpTime?.toISOString() }
             : null,
