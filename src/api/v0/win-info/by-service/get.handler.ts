@@ -15,9 +15,10 @@ import {
   notInArray,
   or,
 } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getComputersByServiceHandler: Handler = async (c) => {
-  const { serviceName, running } = c.req.query();
+  const { serviceName, running, excel } = c.req.query();
   const isRunning = running === 'true';
 
   // 1. Get the latest date ID for each computer
@@ -100,6 +101,10 @@ export const getComputersByServiceHandler: Handler = async (c) => {
     ...comp,
     ip: latestIps[comp.id] || null,
   }));
+
+  if (excel === 'true') {
+    return sendExcel(c, result, 'computers_by_service');
+  }
 
   return c.json(result);
 };

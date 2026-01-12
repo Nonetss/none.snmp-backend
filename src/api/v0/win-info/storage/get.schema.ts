@@ -9,6 +9,10 @@ export const getComputerStorageQuerySchema = z.object({
     description: 'Maximum total storage in GB',
     example: '1000',
   }),
+  excel: z.enum(['true', 'false']).optional().default('false').openapi({
+    description: 'If true, returns the data as an Excel file instead of JSON',
+    example: 'false',
+  }),
 });
 
 export const getComputerStorageResponseSchema = z.array(

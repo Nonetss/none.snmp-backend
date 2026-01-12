@@ -1,5 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import postRouter from './post/post.index';
+import getRouter from './get/get.index';
 import listRouter from './list/get.index';
 import applicationsRouter from './applications/get.index';
 import applicationsListRouter from './applications/list/get.index';
@@ -14,6 +15,7 @@ import storageRouter from './storage/get.index';
 const winInfoRouter = new OpenAPIHono();
 
 winInfoRouter.route('/', postRouter);
+winInfoRouter.route('/', getRouter);
 winInfoRouter.route('/', listRouter);
 winInfoRouter.route('/', applicationsRouter);
 winInfoRouter.route('/', applicationsListRouter);

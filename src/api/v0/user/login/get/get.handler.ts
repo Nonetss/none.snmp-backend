@@ -7,9 +7,10 @@ import {
   userTable,
 } from '@/db';
 import { eq, desc, and } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getLoginHistoryHandler: Handler = async (c) => {
-  const { name, ip } = c.req.valid('query' as any);
+  const { name, ip, excel } = c.req.valid('query' as any);
 
   let computer;
 
@@ -50,11 +51,21 @@ export const getLoginHistoryHandler: Handler = async (c) => {
     .where(eq(loginTable.ComputerSystemId, computer.id))
     .orderBy(desc(loginTable.loginTime));
 
-  return c.json({
+  const result = {
     computerName: computer.Name,
     history: history.map((h) => ({
       ...h,
       loginTime: h.loginTime?.toISOString() || null,
     })),
-  });
+  };
+
+  if (excel === 'true') {
+    const flatResult = result.history.map((h) => ({
+      computerName: result.computerName,
+      ...h,
+    }));
+    return sendExcel(c, flatResult, 'login_history');
+  }
+
+  return c.json(result);
 };

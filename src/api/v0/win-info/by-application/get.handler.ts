@@ -6,9 +6,10 @@ import {
   networkIdentityTable,
 } from '@/db';
 import { eq, desc, sql, and, ilike, inArray, notInArray } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getComputersByAppHandler: Handler = async (c) => {
-  const { appName, installed } = c.req.valid('query' as any);
+  const { appName, installed, excel } = c.req.valid('query' as any);
   const isInstalled = installed === 'true';
 
   // 1. Get the latest date ID for each computer
@@ -86,6 +87,10 @@ export const getComputersByAppHandler: Handler = async (c) => {
     ...comp,
     ip: latestIps[comp.id] || null,
   }));
+
+  if (excel === 'true') {
+    return sendExcel(c, result, 'computers_by_app');
+  }
 
   return c.json(result);
 };

@@ -3,11 +3,30 @@ import { z, createRoute, OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { Handler } from 'hono';
+import { sendExcel } from '@/lib/excel';
 
 const app = new OpenAPIHono();
 
 app.use('*', cors());
 app.use('*', logger());
+
+app.use('*', async (c, next) => {
+  await next();
+  if (c.req.query('excel') === 'true' && c.res.status === 200) {
+    const contentType = c.res.headers.get('Content-Type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const data = await c.res.clone().json();
+        const exportData = Array.isArray(data) ? data : [data];
+        const filename =
+          c.req.path.split('/').filter(Boolean).pop() || 'export';
+        c.res = await sendExcel(c, exportData, filename);
+      } catch (err) {
+        console.error('[Excel Middleware] Error converting to excel:', err);
+      }
+    }
+  }
+});
 
 const rootSchema = z.object({
   message: z.string().openapi({ example: 'Hello, World!' }),

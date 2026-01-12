@@ -9,6 +9,10 @@ export const getComputerRamQuerySchema = z.object({
     description: 'Maximum RAM in GB',
     example: '16',
   }),
+  excel: z.enum(['true', 'false']).optional().default('false').openapi({
+    description: 'If true, returns the data as an Excel file instead of JSON',
+    example: 'false',
+  }),
 });
 
 export const getComputerRamResponseSchema = z.array(

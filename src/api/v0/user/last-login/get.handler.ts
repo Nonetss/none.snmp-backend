@@ -7,9 +7,10 @@ import {
   userTable,
 } from '@/db';
 import { eq, desc, and } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getLastLoginHandler: Handler = async (c) => {
-  const { name, ip } = c.req.query();
+  const { name, ip, excel } = c.req.query();
 
   let computer;
 
@@ -63,8 +64,14 @@ export const getLastLoginHandler: Handler = async (c) => {
     );
   }
 
-  return c.json({
+  const result = {
     ...lastLogin,
     loginTime: lastLogin.loginTime?.toISOString() || null,
-  });
+  };
+
+  if (excel === 'true') {
+    return sendExcel(c, [result], 'last_login');
+  }
+
+  return c.json(result);
 };

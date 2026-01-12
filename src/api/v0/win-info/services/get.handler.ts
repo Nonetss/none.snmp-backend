@@ -2,8 +2,10 @@ import { Handler } from 'hono';
 import { db } from '@/core/config';
 import { runningServicesTable, computerSystemTable, dateTable } from '@/db';
 import { eq, desc, inArray } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getComputerServicesHandler: Handler = async (c) => {
+  const { excel } = c.req.query();
   // 1. Get the latest date for each computer to only show current services
   const latestDatesQuery = db
     .select({
@@ -75,6 +77,10 @@ export const getComputerServicesHandler: Handler = async (c) => {
       })),
     }))
     .sort((a, b) => (a.service || '').localeCompare(b.service || ''));
+
+  if (excel === 'true') {
+    return sendExcel(c, result, 'computer_services');
+  }
 
   return c.json(result);
 };

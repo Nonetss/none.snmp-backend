@@ -6,8 +6,10 @@ import {
   dateTable,
 } from '@/db';
 import { eq, desc, inArray } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getComputerApplicationsHandler: Handler = async (c) => {
+  const { excel } = c.req.query();
   // 1. Get the latest date for each computer to only show current applications
   const latestDatesQuery = db
     .select({
@@ -78,6 +80,10 @@ export const getComputerApplicationsHandler: Handler = async (c) => {
       })),
     }))
     .sort((a, b) => (a.application || '').localeCompare(b.application || ''));
+
+  if (excel === 'true') {
+    return sendExcel(c, result, 'applications');
+  }
 
   return c.json(result);
 };

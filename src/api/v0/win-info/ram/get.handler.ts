@@ -2,9 +2,10 @@ import { Handler } from 'hono';
 import { db } from '@/core/config';
 import { computerSystemTable, networkIdentityTable } from '@/db';
 import { gte, lte, and, desc, eq } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getComputerRamHandler: Handler = async (c) => {
-  const { minRam, maxRam } = c.req.valid('query' as any);
+  const { minRam, maxRam, excel } = c.req.valid('query' as any);
 
   const filters = [];
   const GB_TO_BYTES = 1024 * 1024 * 1024;
@@ -49,6 +50,10 @@ export const getComputerRamHandler: Handler = async (c) => {
     ...comp,
     ip: latestIps[comp.id] || null,
   }));
+
+  if (excel === 'true') {
+    return sendExcel(c, result, 'computer_ram');
+  }
 
   return c.json(result);
 };

@@ -2,9 +2,10 @@ import { Handler } from 'hono';
 import { db } from '@/core/config';
 import { userTable, loginTable, computerSystemTable } from '@/db';
 import { eq, desc, sql } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getComputersByUserHandler: Handler = async (c) => {
-  const { username: rawUsername } = c.req.query();
+  const { username: rawUsername, excel } = c.req.query();
   const username = rawUsername?.toLowerCase();
 
   // 1. Find the user
@@ -41,20 +42,30 @@ export const getComputersByUserHandler: Handler = async (c) => {
     .innerJoin(subquery, eq(computerSystemTable.id, subquery.computerId))
     .orderBy(desc(subquery.maxLoginTime));
 
+  const computers = results.map((r) => {
+    let lastLoginAt = null;
+    if (r.lastLoginAt) {
+      lastLoginAt =
+        r.lastLoginAt instanceof Date
+          ? r.lastLoginAt.toISOString()
+          : new Date(r.lastLoginAt as string).toISOString();
+    }
+    return {
+      ...r,
+      lastLoginAt,
+    };
+  });
+
+  if (excel === 'true') {
+    const flatResult = computers.map((comp) => ({
+      username: user.username,
+      ...comp,
+    }));
+    return sendExcel(c, flatResult, `computers_${user.username}`);
+  }
+
   return c.json({
     username: user.username,
-    computers: results.map((r) => {
-      let lastLoginAt = null;
-      if (r.lastLoginAt) {
-        lastLoginAt =
-          r.lastLoginAt instanceof Date
-            ? r.lastLoginAt.toISOString()
-            : new Date(r.lastLoginAt as string).toISOString();
-      }
-      return {
-        ...r,
-        lastLoginAt,
-      };
-    }),
+    computers,
   });
 };

@@ -6,9 +6,10 @@ import {
   networkIdentityTable,
 } from '@/db';
 import { eq, desc, sql, and } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getComputerStorageHandler: Handler = async (c) => {
-  const { minStorage, maxStorage } = c.req.valid('query' as any);
+  const { minStorage, maxStorage, excel } = c.req.valid('query' as any);
   const GB_TO_BYTES = 1024 * 1024 * 1024;
 
   // 1. Get the latest date ID for each computer
@@ -79,6 +80,10 @@ export const getComputerStorageHandler: Handler = async (c) => {
 
   if (maxStorage) {
     result = result.filter((comp) => comp.totalStorageGB <= Number(maxStorage));
+  }
+
+  if (excel === 'true') {
+    return sendExcel(c, result, 'computer_storage');
   }
 
   return c.json(result);

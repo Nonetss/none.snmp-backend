@@ -2,8 +2,10 @@ import { Handler } from 'hono';
 import { db } from '@/core/config';
 import { computerSystemTable, networkIdentityTable } from '@/db';
 import { desc, eq } from 'drizzle-orm';
+import { sendExcel } from '@/lib/excel';
 
 export const getComputersHandler: Handler = async (c) => {
+  const { excel } = c.req.valid('query' as any);
   const computers = await db.select().from(computerSystemTable);
 
   const allIdentities = await db
@@ -22,6 +24,10 @@ export const getComputersHandler: Handler = async (c) => {
     ...comp,
     ip: latestIps[comp.id] || null,
   }));
+
+  if (excel === 'true') {
+    return sendExcel(c, result, 'computers');
+  }
 
   return c.json(result);
 };

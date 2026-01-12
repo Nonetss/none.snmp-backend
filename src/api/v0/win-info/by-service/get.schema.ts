@@ -10,6 +10,10 @@ export const getComputersByServiceQuerySchema = z.object({
       "Search for computers that have (true) or don't have (false) the service running",
     example: 'true',
   }),
+  excel: z.enum(['true', 'false']).optional().default('false').openapi({
+    description: 'If true, returns the data as an Excel file instead of JSON',
+    example: 'false',
+  }),
 });
 
 export const getComputersByServiceResponseSchema = z.array(

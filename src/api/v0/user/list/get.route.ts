@@ -1,5 +1,8 @@
 import { createRoute } from '@hono/zod-openapi';
-import { getUserListResponseSchema } from './get.schema';
+import {
+  getUserListQuerySchema,
+  getUserListResponseSchema,
+} from './get.schema';
 
 export const getUserListRoute = createRoute({
   method: 'get',
@@ -7,6 +10,9 @@ export const getUserListRoute = createRoute({
   tags: ['Users'],
   summary: 'List all users',
   description: 'Retrieve a list of all users registered in the system.',
+  request: {
+    query: getUserListQuerySchema,
+  },
   responses: {
     200: {
       content: {
