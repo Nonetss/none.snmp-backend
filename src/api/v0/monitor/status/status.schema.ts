@@ -97,6 +97,18 @@ export const RuleDetailsSchema = z
         z.object({
           groupId: z.number(),
           deviceId: z.number(),
+          device: z.object({
+            id: z.number(),
+            ipv4: z.string(),
+            name: z.string().nullable(),
+            status: z
+              .object({
+                status: z.boolean(),
+                lastPing: z.date().nullable(),
+                lastPingUp: z.date().nullable(),
+              })
+              .nullable(),
+          }),
         }),
       ),
     }),

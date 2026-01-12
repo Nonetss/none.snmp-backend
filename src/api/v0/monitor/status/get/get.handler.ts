@@ -33,7 +33,11 @@ export const getRuleStatusHandler: RouteHandler<
           with: {
             devices: {
               with: {
-                device: true,
+                device: {
+                  with: {
+                    status: true,
+                  },
+                },
               },
             },
           },
