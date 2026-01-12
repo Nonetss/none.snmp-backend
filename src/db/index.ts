@@ -70,7 +70,6 @@ import { installedApplicationsTable } from '@/db/models/win-info/installedApplic
 import { loginTable } from '@/db/models/win-info/login.table';
 import { userTable } from '@/db/models/win-info/user.table';
 import { runningServicesTable } from '@/db/models/win-info/runningService.table';
-import { centerTable } from '@/db/models/win-info/center.table';
 
 export {
   deviceTable,
@@ -156,5 +155,4 @@ export {
   loginTable,
   userTable,
   runningServicesTable,
-  centerTable,
 };

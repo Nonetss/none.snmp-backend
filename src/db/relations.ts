@@ -15,13 +15,6 @@ export const relations = defineRelations(schema, (r) => ({
     processorTable: r.many.processorTable(),
     loginTable: r.many.loginTable(),
     runningServicesTable: r.many.runningServicesTable(),
-    centerTable: r.one.centerTable({
-      from: r.computerSystemTable.CenterId,
-      to: r.centerTable.id,
-    }),
-  },
-  centerTable: {
-    computerSystemTable: r.many.computerSystemTable(),
   },
   runningServicesTable: {
     computerSystemTable: r.one.computerSystemTable({
