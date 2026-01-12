@@ -31,7 +31,11 @@ export const getRuleStatusHandler: RouteHandler<
         },
         deviceGroup: {
           with: {
-            devices: true,
+            devices: {
+              with: {
+                device: true,
+              },
+            },
           },
         },
       },
@@ -42,18 +46,6 @@ export const getRuleStatusHandler: RouteHandler<
     }
 
     const allowedPorts = rule.portGroup?.items.map((i) => i.port) || [];
-
-    interface PortStatus {
-      deviceId: number;
-      deviceDataPort: {
-        port: number;
-        statusData: {
-          status: boolean;
-          checkTime: Date;
-          responseTime: number | null;
-        }[]; // Ahora es un array
-      }[];
-    }
 
     const conditions = [eq(portStatusTable.ruleId, ruleId)];
 
@@ -128,16 +120,64 @@ export const getRuleStatusHandler: RouteHandler<
     }
 
     // 2. Transformar los Maps anidados a la estructura de arrays final
-    const groupedData: PortStatus[] = Array.from(deviceMap.entries()).map(
-      ([deviceId, portMap]) => ({
-        deviceId,
-        deviceDataPort: Array.from(portMap.entries()).map(
-          ([port, statusData]) => ({
-            port,
-            statusData, // Este ya es el array de estados agrupados
-          }),
-        ),
-      }),
+    // Limitamos a un máximo de 300 puntos por dispositivo/puerto para no sobrecargar el frontend
+    const MAX_POINTS = 300;
+
+    const groupedData = Array.from(deviceMap.entries()).map(
+      ([deviceId, portMap]) => {
+        return {
+          deviceId,
+          deviceDataPort: Array.from(portMap.entries()).map(
+            ([port, statusData]) => {
+              let sampledData = statusData;
+
+              // Si hay más de MAX_POINTS, realizamos un muestreo (downsampling) mediante promedios
+              if (statusData.length > MAX_POINTS) {
+                const totalPoints = statusData.length;
+                sampledData = [];
+                for (let i = 0; i < MAX_POINTS; i++) {
+                  const start = Math.floor((i * totalPoints) / MAX_POINTS);
+                  const end = Math.floor(((i + 1) * totalPoints) / MAX_POINTS);
+
+                  if (start >= end) continue;
+
+                  const chunk = statusData.slice(start, end);
+
+                  let sumResponseTime = 0;
+                  let countResponseTime = 0;
+                  let trueStatusCount = 0;
+                  let sumCheckTime = 0;
+
+                  for (const item of chunk) {
+                    if (item.responseTime !== null) {
+                      sumResponseTime += item.responseTime;
+                      countResponseTime++;
+                    }
+                    if (item.status) {
+                      trueStatusCount++;
+                    }
+                    sumCheckTime += item.checkTime.getTime();
+                  }
+
+                  sampledData.push({
+                    status: trueStatusCount > chunk.length / 2,
+                    checkTime: new Date(sumCheckTime / chunk.length),
+                    responseTime:
+                      countResponseTime > 0
+                        ? Math.round(sumResponseTime / countResponseTime)
+                        : null,
+                  });
+                }
+              }
+
+              return {
+                port,
+                statusData: sampledData,
+              };
+            },
+          ),
+        };
+      },
     );
 
     return c.json({ rule, groupedData }, 200);

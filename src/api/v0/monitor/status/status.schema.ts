@@ -55,16 +55,14 @@ export const PortStatusDataSchema = z
 export const DeviceDataPortSchema = z
   .object({
     port: z.number().openapi({ example: 80 }),
-    history: z.array(PortStatusDataSchema),
+    statusData: z.array(PortStatusDataSchema),
   })
   .openapi('DeviceDataPort');
 
 export const GroupedPortStatusSchema = z
   .object({
     deviceId: z.number().openapi({ example: 1 }),
-    ipv4: z.string().openapi({ example: '192.168.1.1' }),
-    deviceName: z.string().nullable().openapi({ example: 'Core-Switch' }),
-    ports: z.array(DeviceDataPortSchema),
+    deviceDataPort: z.array(DeviceDataPortSchema),
   })
   .openapi('GroupedPortStatus');
 
