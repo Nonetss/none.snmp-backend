@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 export const TcpCheckQuerySchema = z.object({
   ip: z
     .string()
-    .openapi({ example: '172.19.64.105', description: 'Target IP address' }),
+    .openapi({ example: '10.0.0.1', description: 'Target IP address' }),
   port: z.string().openapi({ example: '80', description: 'Target TCP port' }),
   timeout: z
     .string()
@@ -21,7 +21,7 @@ export const TcpCheckResponseSchema = z.object({
 });
 
 export const PortScanSchema = z.object({
-  ip: z.string().openapi({ example: '172.19.64.105' }),
+  ip: z.string().openapi({ example: '10.0.0.1' }),
   allPorts: z.boolean().optional().default(false).openapi({
     example: false,
     description: 'If true, scans 1-65535. If false or omitted, scans 1-1024.',
