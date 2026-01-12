@@ -1,5 +1,5 @@
 # Configuración del endpoint
-$endpoint = "http://localhost:3000/api/v1/user/login"
+$endpoint = "http://localhost:3000/api/v0/user/login"
 
 # 1. Obtener información necesaria
 $username = $env:USERNAME

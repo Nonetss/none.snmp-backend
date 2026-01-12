@@ -1,4 +1,4 @@
-$endpoint = "http://localhost:3000/api/v1/win-info"
+$endpoint = "http://localhost:3000/api/v0/win-info"
 
 # 1. Aplicaciones instaladas
 $installedApps = Get-ItemProperty `
