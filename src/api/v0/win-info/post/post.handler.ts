@@ -14,8 +14,10 @@ import {
   processorTable,
   installedApplicationsTable,
   runningServicesTable,
+  deviceTable,
+  interfaceTable,
 } from '@/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { PostData } from './post.schema';
 
 const sanitize = (val: any): any => {
@@ -50,6 +52,11 @@ const fixDate = (dateStr: string | null | undefined): string | null => {
     )}`;
   }
   return null;
+};
+
+const normalizeMac = (mac: string | null | undefined): string | null => {
+  if (!mac) return null;
+  return mac.toUpperCase().replace(/[^0-9A-F]/g, '');
 };
 
 export const postHandler: Handler = async (c) => {
@@ -103,6 +110,27 @@ export const postHandler: Handler = async (c) => {
   }
   const dateId = dateRecord.id;
 
+  // 1.5. Find matching device by IP
+  const identitiesData = Array.isArray(NetworkIdentity)
+    ? NetworkIdentity
+    : [NetworkIdentity];
+  const ips = identitiesData
+    .map((ni) => ni?.IPAddress)
+    .filter((ip): ip is string => !!ip);
+
+  let deviceId: number | null = null;
+  if (ips.length > 0) {
+    const matchingDevice = await db
+      .select({ id: deviceTable.id })
+      .from(deviceTable)
+      .where(inArray(deviceTable.ipv4, ips))
+      .limit(1);
+
+    if (matchingDevice.length > 0) {
+      deviceId = matchingDevice[0].id;
+    }
+  }
+
   // 2. Get or create/update ComputerSystem
   let computerSystem = await db.query.computerSystemTable.findFirst({
     where: {
@@ -121,6 +149,7 @@ export const postHandler: Handler = async (c) => {
         Manufacturer: ComputerSystem.Manufacturer,
         Model: ComputerSystem.Model,
         TotalPhysicalMemory: ComputerSystem.TotalPhysicalMemory,
+        deviceId,
       })
       .returning();
   } else {
@@ -132,10 +161,40 @@ export const postHandler: Handler = async (c) => {
         Manufacturer: ComputerSystem.Manufacturer,
         Model: ComputerSystem.Model,
         TotalPhysicalMemory: ComputerSystem.TotalPhysicalMemory,
+        deviceId: deviceId || computerSystem.deviceId,
       })
       .where(eq(computerSystemTable.id, computerSystem.id));
   }
   const computerSystemId = computerSystem.id;
+
+  // 2.5. Resolve Interface IDs for Network Identities
+  const networkIdentitiesWithRefs = await Promise.all(
+    identitiesData.map(async (ni) => {
+      let interfaceId: number | null = null;
+      const cleanNiMac = normalizeMac(ni.MACAddress);
+
+      if (cleanNiMac) {
+        // Fetch interfaces for this device (or all if device not found)
+        let query = db.select().from(interfaceTable);
+        if (deviceId) {
+          query = query.where(eq(interfaceTable.deviceId, deviceId)) as any;
+        }
+        const interfaces = await query;
+
+        const matchingInterface = interfaces.find(
+          (i) => normalizeMac(i.ifPhysAddress) === cleanNiMac,
+        );
+
+        if (matchingInterface) {
+          interfaceId = matchingInterface.id;
+        }
+      }
+      return {
+        ...ni,
+        interfaceId,
+      };
+    }),
+  );
 
   const common = {
     ComputerSystemId: computerSystemId,
@@ -168,7 +227,7 @@ export const postHandler: Handler = async (c) => {
     sync(biosTable, BIOS),
     sync(baseBoardTable, BaseBoard),
     sync(computerSystemProductTable, ComputerSystemProduct),
-    sync(networkIdentityTable, NetworkIdentity),
+    sync(networkIdentityTable, networkIdentitiesWithRefs),
     sync(networkAdapterConfigTable, NetworkAdapterConfig),
     sync(operatingSystemTable, OperatingSystem),
     sync(processorTable, Processor),

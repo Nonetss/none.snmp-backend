@@ -15,6 +15,10 @@ export const relations = defineRelations(schema, (r) => ({
     processorTable: r.many.processorTable(),
     loginTable: r.many.loginTable(),
     runningServicesTable: r.many.runningServicesTable(),
+    device: r.one.deviceTable({
+      from: r.computerSystemTable.deviceId,
+      to: r.deviceTable.id,
+    }),
   },
   runningServicesTable: {
     computerSystemTable: r.one.computerSystemTable({
@@ -105,6 +109,10 @@ export const relations = defineRelations(schema, (r) => ({
     dateTable: r.one.dateTable({
       from: r.networkIdentityTable.DateId,
       to: r.dateTable.id,
+    }),
+    interface: r.one.interfaceTable({
+      from: r.networkIdentityTable.interfaceId,
+      to: r.interfaceTable.id,
     }),
   },
   networkAdapterConfigTable: {
@@ -223,6 +231,10 @@ export const relations = defineRelations(schema, (r) => ({
     portStatus: r.many.portStatusTable({
       from: r.deviceTable.id,
       to: r.portStatusTable.deviceId,
+    }),
+    winInfoSystems: r.many.computerSystemTable({
+      from: r.deviceTable.id,
+      to: r.computerSystemTable.deviceId,
     }),
   },
   monitorGroupTable: {
@@ -397,6 +409,10 @@ export const relations = defineRelations(schema, (r) => ({
     data: r.many.interfaceDataTable({
       from: r.interfaceTable.id,
       to: r.interfaceDataTable.interfaceId,
+    }),
+    networkIdentities: r.many.networkIdentityTable({
+      from: r.interfaceTable.id,
+      to: r.networkIdentityTable.interfaceId,
     }),
   },
   interfaceDataTable: {
