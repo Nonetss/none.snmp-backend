@@ -7,8 +7,22 @@ export const NotificationActionSchema = z.object({
   type: z.enum(['ntfy', 'email']).openapi({ example: 'ntfy' }),
   consecutiveFailures: z.number().openapi({ example: 1 }),
   repeatIntervalMins: z.number().openapi({ example: 60 }),
-  deviceAggregation: z.enum(['any', 'all']).openapi({ example: 'any' }),
-  portAggregation: z.enum(['any', 'all']).openapi({ example: 'any' }),
+  deviceAggregation: z
+    .enum(['any', 'all', 'percentage'])
+    .openapi({ example: 'any' }),
+  deviceAggregationValue: z
+    .number()
+    .nullable()
+    .optional()
+    .openapi({ example: 50 }),
+  portAggregation: z
+    .enum(['any', 'all', 'percentage'])
+    .openapi({ example: 'any' }),
+  portAggregationValue: z
+    .number()
+    .nullable()
+    .optional()
+    .openapi({ example: 50 }),
   lastSentAt: z
     .string()
     .nullable()
@@ -26,15 +40,25 @@ export const CreateNotificationActionSchema = z.object({
     .default(60)
     .openapi({ example: 60 }),
   deviceAggregation: z
-    .enum(['any', 'all'])
+    .enum(['any', 'all', 'percentage'])
     .optional()
     .default('any')
     .openapi({ example: 'any' }),
+  deviceAggregationValue: z
+    .number()
+    .optional()
+    .default(0)
+    .openapi({ example: 50 }),
   portAggregation: z
-    .enum(['any', 'all'])
+    .enum(['any', 'all', 'percentage'])
     .optional()
     .default('any')
     .openapi({ example: 'any' }),
+  portAggregationValue: z
+    .number()
+    .optional()
+    .default(0)
+    .openapi({ example: 50 }),
 });
 
 export const UpdateNotificationActionSchema =

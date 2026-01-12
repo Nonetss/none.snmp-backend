@@ -186,6 +186,11 @@ async function evaluateNotifications(
       if (action.portAggregation === 'all') {
         // Para que el dispositivo esté Down, TODOS sus puertos deben haber fallado
         return failedPorts.length === ports.length && ports.length > 0;
+      } else if (action.portAggregation === 'percentage') {
+        // Para que el dispositivo esté Down, un PORCENTAJE de sus puertos deben haber fallado
+        const threshold = action.portAggregationValue || 0;
+        const failedPercentage = (failedPorts.length / ports.length) * 100;
+        return failedPercentage >= threshold && ports.length > 0;
       } else {
         // Para que el dispositivo esté Down, AL MENOS UN puerto debe haber fallado
         return failedPorts.length > 0;
@@ -196,6 +201,12 @@ async function evaluateNotifications(
     if (action.deviceAggregation === 'all') {
       // Para que la regla esté Down, TODOS los dispositivos deben estar Down
       isRuleDown = deviceDownStates.every((down) => down === true);
+    } else if (action.deviceAggregation === 'percentage') {
+      // Para que la regla esté Down, un PORCENTAJE de los dispositivos deben estar Down
+      const threshold = action.deviceAggregationValue || 0;
+      const downCount = deviceDownStates.filter((down) => down === true).length;
+      const downPercentage = (downCount / devices.length) * 100;
+      isRuleDown = downPercentage >= threshold && devices.length > 0;
     } else {
       // Para que la regla esté Down, AL MENOS UN dispositivo debe estar Down
       isRuleDown = deviceDownStates.some((down) => down === true);

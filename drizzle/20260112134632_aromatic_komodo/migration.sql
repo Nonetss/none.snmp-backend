@@ -1,0 +1,2 @@
+ALTER TABLE "notification_action" ADD COLUMN "device_aggregation_value" integer DEFAULT 0;--> statement-breakpoint
+ALTER TABLE "notification_action" ADD COLUMN "port_aggregation_value" integer DEFAULT 0;

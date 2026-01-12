@@ -23,13 +23,15 @@ export const notificationActionTable = pgTable('notification_action', {
 
   // Agregación
   deviceAggregation: varchar('device_aggregation', {
-    enum: ['any', 'all'],
+    enum: ['any', 'all', 'percentage'],
   })
     .notNull()
     .default('any'),
+  deviceAggregationValue: integer('device_aggregation_value').default(0),
   portAggregation: varchar('port_aggregation', {
-    enum: ['any', 'all'],
+    enum: ['any', 'all', 'percentage'],
   })
     .notNull()
     .default('any'),
+  portAggregationValue: integer('port_aggregation_value').default(0),
 });
