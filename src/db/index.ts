@@ -55,6 +55,22 @@ import {
 } from '@/db/models/notifications/ntfy.table';
 import { notificationActionTable } from '@/db/models/notifications/notification.table';
 import { lldpView } from '@/db/models/views/lldp.view';
+import { baseBoardTable } from '@/db/models/win-info/baseBoard.table';
+import { biosTable } from '@/db/models/win-info/bios.table';
+import { computerSystemTable } from '@/db/models/win-info/computerSystem.table';
+import { computerSystemProductTable } from '@/db/models/win-info/computerSystemProduct.table';
+import { dateTable } from '@/db/models/win-info/date.table';
+import { diskDriveTable } from '@/db/models/win-info/diskDrive.table';
+import { networkAdapterConfigTable } from '@/db/models/win-info/networkAdapterConfig.table';
+import { networkIdentityTable } from '@/db/models/win-info/networkIdentity.table';
+import { operatingSystemTable } from '@/db/models/win-info/operatingSystem.table';
+import { physicalMemoryTable } from '@/db/models/win-info/physicalMemory.table';
+import { processorTable } from '@/db/models/win-info/processor.table';
+import { installedApplicationsTable } from '@/db/models/win-info/installedApplications.table';
+import { loginTable } from '@/db/models/win-info/login.table';
+import { userTable } from '@/db/models/win-info/user.table';
+import { runningServicesTable } from '@/db/models/win-info/runningService.table';
+import { centerTable } from '@/db/models/win-info/center.table';
 
 export {
   deviceTable,
@@ -123,4 +139,22 @@ export {
 
   // Views
   lldpView,
+
+  // Win-Info
+  baseBoardTable,
+  biosTable,
+  computerSystemTable,
+  computerSystemProductTable,
+  dateTable,
+  diskDriveTable,
+  networkAdapterConfigTable,
+  networkIdentityTable,
+  operatingSystemTable,
+  physicalMemoryTable,
+  processorTable,
+  installedApplicationsTable,
+  loginTable,
+  userTable,
+  runningServicesTable,
+  centerTable,
 };

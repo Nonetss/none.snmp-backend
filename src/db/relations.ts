@@ -2,6 +2,158 @@ import { defineRelations } from 'drizzle-orm';
 import * as schema from '@/db';
 
 export const relations = defineRelations(schema, (r) => ({
+  computerSystemTable: {
+    installedApplicationsTable: r.many.installedApplicationsTable(),
+    baseBoardTable: r.many.baseBoardTable(),
+    biosTable: r.many.biosTable(),
+    computerSystemProductTable: r.many.computerSystemProductTable(),
+    diskDriveTable: r.many.diskDriveTable(),
+    networkAdapterConfigTable: r.many.networkAdapterConfigTable(),
+    networkIdentityTable: r.many.networkIdentityTable(),
+    operatingSystemTable: r.many.operatingSystemTable(),
+    physicalMemoryTable: r.many.physicalMemoryTable(),
+    processorTable: r.many.processorTable(),
+    loginTable: r.many.loginTable(),
+    runningServicesTable: r.many.runningServicesTable(),
+    centerTable: r.one.centerTable({
+      from: r.computerSystemTable.CenterId,
+      to: r.centerTable.id,
+    }),
+  },
+  centerTable: {
+    computerSystemTable: r.many.computerSystemTable(),
+  },
+  runningServicesTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.runningServicesTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+  },
+  userTable: {
+    loginTable: r.many.loginTable(),
+  },
+  loginTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.loginTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    userTable: r.one.userTable({
+      from: r.loginTable.userId,
+      to: r.userTable.id,
+    }),
+  },
+  dateTable: {
+    installedApplicationsTable: r.many.installedApplicationsTable(),
+    baseBoardTable: r.many.baseBoardTable(),
+    biosTable: r.many.biosTable(),
+    computerSystemProductTable: r.many.computerSystemProductTable(),
+    diskDriveTable: r.many.diskDriveTable(),
+    networkAdapterConfigTable: r.many.networkAdapterConfigTable(),
+    networkIdentityTable: r.many.networkIdentityTable(),
+    operatingSystemTable: r.many.operatingSystemTable(),
+    physicalMemoryTable: r.many.physicalMemoryTable(),
+    processorTable: r.many.processorTable(),
+  },
+  baseBoardTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.baseBoardTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.baseBoardTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  biosTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.biosTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.biosTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  computerSystemProductTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.computerSystemProductTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.computerSystemProductTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  diskDriveTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.diskDriveTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.diskDriveTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  installedApplicationsTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.installedApplicationsTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.installedApplicationsTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  networkIdentityTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.networkIdentityTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.networkIdentityTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  networkAdapterConfigTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.networkAdapterConfigTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.networkAdapterConfigTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  operatingSystemTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.operatingSystemTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.operatingSystemTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  physicalMemoryTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.physicalMemoryTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.physicalMemoryTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
+  processorTable: {
+    computerSystemTable: r.one.computerSystemTable({
+      from: r.processorTable.ComputerSystemId,
+      to: r.computerSystemTable.id,
+    }),
+    dateTable: r.one.dateTable({
+      from: r.processorTable.DateId,
+      to: r.dateTable.id,
+    }),
+  },
   deviceTable: {
     subnet: r.one.subnetTable({
       from: r.deviceTable.subnetId,
