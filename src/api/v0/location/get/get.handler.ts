@@ -1,6 +1,6 @@
 import { db } from '@/core/config';
 import { locationTable, deviceTable, subnetTable } from '@/db';
-import { eq, sql, inArray } from 'drizzle-orm';
+import { eq, sql, inArray, isNull } from 'drizzle-orm';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getLocationRoute } from './get.route';
 
@@ -15,35 +15,66 @@ export const getLocationHandler: RouteHandler<typeof getLocationRoute> = async (
       return c.json({ message: 'Invalid location ID' }, 400) as any;
     }
 
-    // 1. Obtener la localización base con el contador de dispositivos
-    const [location] = await db
-      .select({
-        id: locationTable.id,
-        name: locationTable.name,
-        description: locationTable.description,
-        parentId: locationTable.parentId,
-        deviceCount: sql<number>`count(${deviceTable.id})::int`,
-      })
-      .from(locationTable)
-      .leftJoin(deviceTable, eq(locationTable.id, deviceTable.locationId))
-      .where(eq(locationTable.id, locationId))
-      .groupBy(locationTable.id);
+    let location: any;
+    let devices: any[];
 
-    if (!location) {
-      return c.json({ message: 'Location not found' }, 404) as any;
+    if (locationId === -1) {
+      // Caso especial: Dispositivos sin asignar
+      const [countResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(deviceTable)
+        .where(isNull(deviceTable.locationId));
+
+      location = {
+        id: -1,
+        name: 'Unassigned',
+        description: 'Devices with no location assigned',
+        parentId: null,
+        deviceCount: countResult.count,
+      };
+
+      devices = await db
+        .select({
+          id: deviceTable.id,
+          ipv4: deviceTable.ipv4,
+          name: deviceTable.name,
+          subnetId: deviceTable.subnetId,
+          snmpId: deviceTable.snmpAuthId,
+        })
+        .from(deviceTable)
+        .where(isNull(deviceTable.locationId));
+    } else {
+      // 1. Obtener la localización base con el contador de dispositivos
+      const [locationRow] = await db
+        .select({
+          id: locationTable.id,
+          name: locationTable.name,
+          description: locationTable.description,
+          parentId: locationTable.parentId,
+          deviceCount: sql<number>`count(${deviceTable.id})::int`,
+        })
+        .from(locationTable)
+        .leftJoin(deviceTable, eq(locationTable.id, deviceTable.locationId))
+        .where(eq(locationTable.id, locationId))
+        .groupBy(locationTable.id);
+
+      if (!locationRow) {
+        return c.json({ message: 'Location not found' }, 404) as any;
+      }
+      location = locationRow;
+
+      // 2. Obtener los dispositivos de esta localización
+      devices = await db
+        .select({
+          id: deviceTable.id,
+          ipv4: deviceTable.ipv4,
+          name: deviceTable.name,
+          subnetId: deviceTable.subnetId,
+          snmpId: deviceTable.snmpAuthId,
+        })
+        .from(deviceTable)
+        .where(eq(deviceTable.locationId, locationId));
     }
-
-    // 2. Obtener los dispositivos de esta localización
-    const devices = await db
-      .select({
-        id: deviceTable.id,
-        ipv4: deviceTable.ipv4,
-        name: deviceTable.name,
-        subnetId: deviceTable.subnetId,
-        snmpId: deviceTable.snmpAuthId,
-      })
-      .from(deviceTable)
-      .where(eq(deviceTable.locationId, locationId));
 
     // 3. Obtener las subredes implicadas
     const uniqueSubnetIds = [...new Set(devices.map((d) => d.subnetId))];
@@ -64,10 +95,13 @@ export const getLocationHandler: RouteHandler<typeof getLocationRoute> = async (
     }));
 
     // 4. Obtener sub-localizaciones
-    const children = await db
-      .select()
-      .from(locationTable)
-      .where(eq(locationTable.parentId, locationId));
+    const children =
+      locationId === -1
+        ? []
+        : await db
+            .select()
+            .from(locationTable)
+            .where(eq(locationTable.parentId, locationId));
 
     return c.json(
       {

@@ -6,8 +6,10 @@ export const deviceDetailedResultSchema = z.object({
   ipv4: z.string(),
   snmpAuthId: z.number().nullable(),
   subnetId: z.number().nullable(),
+  locationId: z.number().nullable(),
   subnet: z.any().nullable(),
   snmpAuth: z.any().nullable(),
+  location: z.any().nullable(),
   system: z
     .object({
       id: z.number(),

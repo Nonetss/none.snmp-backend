@@ -20,15 +20,21 @@ export const assignLocationHandler: RouteHandler<
       ) as any;
     }
 
-    // Validar que la location existe
-    const [location] = await db
-      .select()
-      .from(locationTable)
-      .where(eq(locationTable.id, locationId))
-      .limit(1);
+    // Si locationId es -1, queremos QUITAR la localización (set null)
+    const isUnassign = locationId === -1;
+    const finalLocationId = isUnassign ? null : locationId;
 
-    if (!location) {
-      return c.json({ message: 'Location not found' }, 404) as any;
+    if (!isUnassign) {
+      // Validar que la location existe
+      const [location] = await db
+        .select()
+        .from(locationTable)
+        .where(eq(locationTable.id, locationId))
+        .limit(1);
+
+      if (!location) {
+        return c.json({ message: 'Location not found' }, 404) as any;
+      }
     }
 
     const conditions = [];
@@ -77,13 +83,15 @@ export const assignLocationHandler: RouteHandler<
     // Actualizar dispositivos que cumplan cualquiera de las condiciones (OR)
     const result = await db
       .update(deviceTable)
-      .set({ locationId })
+      .set({ locationId: finalLocationId })
       .where(targetFilter)
       .returning();
 
     return c.json(
       {
-        message: `${result.length} devices assigned to location`,
+        message: isUnassign
+          ? `${result.length} devices unassigned from locations`
+          : `${result.length} devices assigned to location`,
         count: result.length,
       },
       200,
