@@ -54,7 +54,6 @@ import {
   ntfyActionTagTable,
 } from '@/db/models/notifications/ntfy.table';
 import { notificationActionTable } from '@/db/models/notifications/notification.table';
-import { lldpView } from '@/db/models/views/lldp.view';
 import { baseBoardTable } from '@/db/models/win-info/baseBoard.table';
 import { biosTable } from '@/db/models/win-info/bios.table';
 import { computerSystemTable } from '@/db/models/win-info/computerSystem.table';
@@ -137,9 +136,6 @@ export {
   monitorPortGroupItemTable,
   monitorRuleTable,
   portStatusTable,
-
-  // Views
-  lldpView,
 
   // Win-Info
   baseBoardTable,

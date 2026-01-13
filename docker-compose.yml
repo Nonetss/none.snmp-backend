@@ -1,29 +1,4 @@
 services:
-  backend:
-    container_name: none-snmp-backend
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: always
-    environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@database:5432/${POSTGRES_DB:-postgres}
-      - NPM_IDENTITY=${NPM_IDENTITY}
-      - NPM_SECRET=${NPM_SECRET}
-      - NPM_URL=${NPM_URL}
-      - PANGOLIN_KEY=${PANGOLIN_KEY}
-      - PANGOLIN_URL=${PANGOLIN_URL}
-      - PANGOLIN_ORG=${PANGOLIN_ORG}
-    depends_on:
-      database:
-        condition: service_healthy
-    command: >
-      sh -c "bunx drizzle-kit migrate --config drizzle.config.ts && bun run src/index.ts"
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   database:
     container_name: none-snmp-database
     image: postgres:16
@@ -32,6 +7,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-postgres}
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
