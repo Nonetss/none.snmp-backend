@@ -1,13 +1,19 @@
 import { KomodoClient } from 'komodo_client';
+import { db } from '@/core/config';
+import { komodoAuthTable } from '@/db';
 
-const KOMODO_KEY = process.env.KOMODO_KEY || '';
-const KOMODO_SECRET = process.env.KOMODO_SECRET || '';
-const KOMODO_URL = process.env.KOMODO_URL || '';
+export async function getKomodoClient() {
+  const [auth] = await db.select().from(komodoAuthTable).limit(1);
 
-export const komodo = KomodoClient(KOMODO_URL, {
-  type: 'api-key',
-  params: {
-    key: KOMODO_KEY,
-    secret: KOMODO_SECRET,
-  },
-});
+  if (!auth) {
+    throw new Error('Komodo credentials not found in database');
+  }
+
+  return KomodoClient(auth.url, {
+    type: 'api-key',
+    params: {
+      key: auth.key,
+      secret: auth.secret,
+    },
+  });
+}

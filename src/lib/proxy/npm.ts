@@ -1,18 +1,22 @@
 import axios from 'axios';
-const NPM_URL = process.env.NPM_URL || '';
-const NPM_IDENTITY = process.env.NPM_IDENTITY || '';
-const NPM_SECRET = process.env.NPM_SECRET || '';
+import { db } from '@/core/config';
+import { npmAuthTable } from '@/db';
 
 export async function getNpmProxyHosts() {
-  if (!NPM_URL || !NPM_IDENTITY || !NPM_SECRET) {
+  const [auth] = await db.select().from(npmAuthTable).limit(1);
+
+  if (!auth) {
+    console.error('NPM credentials not found in database');
     return [];
   }
 
+  const { url, username, password } = auth;
+
   try {
     // 1. Authenticate to get token
-    const authResponse = await axios.post(`${NPM_URL}/api/tokens`, {
-      identity: NPM_IDENTITY,
-      secret: NPM_SECRET,
+    const authResponse = await axios.post(`${url}/api/tokens`, {
+      identity: username,
+      secret: password,
     });
 
     const token = authResponse.data.token;
@@ -22,7 +26,7 @@ export async function getNpmProxyHosts() {
     }
 
     // 2. Get Proxy Hosts using the token
-    const hostsResponse = await axios.get(`${NPM_URL}/api/nginx/proxy-hosts`, {
+    const hostsResponse = await axios.get(`${url}/api/nginx/proxy-hosts`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
