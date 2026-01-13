@@ -571,4 +571,16 @@ export const relations = defineRelations(schema, (r) => ({
       to: r.deviceTable.id,
     }),
   },
+  pangolinAuthTable: {
+    pangolinOrg: r.many.pangolinOrgTable({
+      from: r.pangolinAuthTable.id,
+      to: r.pangolinOrgTable.authId,
+    }),
+  },
+  pangolinOrgTable: {
+    auth: r.one.pangolinAuthTable({
+      from: r.pangolinOrgTable.authId,
+      to: r.pangolinAuthTable.id,
+    }),
+  },
 }));

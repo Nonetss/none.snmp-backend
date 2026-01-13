@@ -71,6 +71,12 @@ import { userTable } from '@/db/models/win-info/user.table';
 import { runningServicesTable } from '@/db/models/win-info/runningService.table';
 import { dnsServerTable } from '@/db/models/toolbox/dnsServer.table';
 import { domainTable } from '@/db/models/toolbox/domain.table';
+import {
+  pangolinAuthTable,
+  pangolinOrgTable,
+} from '@/db/models/auth/pangolinAuth.table';
+import { npmAuthTable } from '@/db/models/auth/npmAuth.table';
+import { komodoAuthTable } from '@/db/models/auth/komodoAuth.table';
 
 export {
   deviceTable,
@@ -157,4 +163,10 @@ export {
   // Toolbox
   dnsServerTable,
   domainTable,
+
+  // Auth
+  komodoAuthTable,
+  npmAuthTable,
+  pangolinAuthTable,
+  pangolinOrgTable,
 };
