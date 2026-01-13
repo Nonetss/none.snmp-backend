@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     iputils-ping \
     snmp \
+    traceroute \
     && rm -rf /var/lib/apt/lists/*
 
 # Run the app
