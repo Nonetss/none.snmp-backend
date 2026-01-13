@@ -17,6 +17,7 @@
     "hono": "^4.9.12",
     "husky": "^9.1.7",
     "ipaddr.js": "^2.3.0",
+    "komodo_client": "^1.19.5",
     "lint-staged": "^16.2.7",
     "net-snmp": "^3.26.0",
     "node-cron": "^4.2.1",
