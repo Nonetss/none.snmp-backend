@@ -1,4 +1,4 @@
-import { KomodoClient, Types } from 'komodo_client';
+import { KomodoClient } from 'komodo_client';
 
 const KOMODO_KEY = process.env.KOMODO_KEY || '';
 const KOMODO_SECRET = process.env.KOMODO_SECRET || '';

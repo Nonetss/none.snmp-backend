@@ -1,7 +1,7 @@
 import axios from 'axios';
-const NPM_URL = process.env.NPM_URL;
-const NPM_IDENTITY = process.env.NPM_IDENTITY;
-const NPM_SECRET = process.env.NPM_SECRET;
+const NPM_URL = process.env.NPM_URL || '';
+const NPM_IDENTITY = process.env.NPM_IDENTITY || '';
+const NPM_SECRET = process.env.NPM_SECRET || '';
 
 export async function getNpmProxyHosts() {
   if (!NPM_URL || !NPM_IDENTITY || !NPM_SECRET) {

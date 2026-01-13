@@ -2,9 +2,9 @@ import { Handler } from 'hono';
 import axios from 'axios';
 
 // Configuración de Pangolin desde variables de entorno
-const PANGOLIN_URL = process.env.PANGOLIN_URL;
-const PANGOLIN_KEY = process.env.PANGOLIN_KEY;
-const PANGOLIN_ORG = process.env.PANGOLIN_ORG;
+const PANGOLIN_URL = process.env.PANGOLIN_URL || '';
+const PANGOLIN_KEY = process.env.PANGOLIN_KEY || '';
+const PANGOLIN_ORG = process.env.PANGOLIN_ORG || '';
 
 // Crear cliente Axios para Pangolin
 const pangolin = axios.create({
