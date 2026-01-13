@@ -4,7 +4,7 @@ import { npmGetResponseSchema } from './get.schema';
 export const npmGetRoute = createRoute({
   method: 'get',
   path: '/npm',
-  tags: ['NPM'],
+  tags: ['Proxy'],
   summary: 'Get All NPM Proxy Hosts',
   description:
     'Authenticate and retrieve all proxy hosts from Nginx Proxy Manager.',

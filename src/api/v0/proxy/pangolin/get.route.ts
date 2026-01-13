@@ -4,7 +4,7 @@ import { pangolinGetResponseSchema } from './get.schema';
 export const pangolinGetRoute = createRoute({
   method: 'get',
   path: '/pangolin',
-  tags: ['Pangolin'],
+  tags: ['Proxy'],
   summary: 'Get All Pangolin Resources',
   description:
     'Retrieve all resources and information from Pangolin without any filtering.',
