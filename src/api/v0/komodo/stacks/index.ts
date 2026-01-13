@@ -5,6 +5,6 @@ import getKomodoStacksByServerRouter from './get/get.index';
 const komodoStackRouter = new OpenAPIHono();
 
 komodoStackRouter.route('/', listKomodoStacksRouter);
-komodoStackRouter.route('/server', getKomodoStacksByServerRouter);
+komodoStackRouter.route('/', getKomodoStacksByServerRouter);
 
 export default komodoStackRouter;

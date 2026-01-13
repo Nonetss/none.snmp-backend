@@ -1,12 +1,12 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { getKomodoContainersRoute } from './get.route';
-import { getKomodoContainersHandler } from './get.handler';
+import { getKomodoContainersByServerRoute } from './get.route';
+import { getKomodoContainersByServerHandler } from './get.handler';
 
-const getKomodoContainerRouter = new OpenAPIHono();
+const getKomodoContainersByServerRouter = new OpenAPIHono();
 
-getKomodoContainerRouter.openapi(
-  getKomodoContainersRoute,
-  getKomodoContainersHandler,
+getKomodoContainersByServerRouter.openapi(
+  getKomodoContainersByServerRoute,
+  getKomodoContainersByServerHandler,
 );
 
-export default getKomodoContainerRouter;
+export default getKomodoContainersByServerRouter;

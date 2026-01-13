@@ -1,5 +1,5 @@
 import { komodo } from '@/lib/komodo';
-import type { RouteHandler } from '@hono/zod-openapi';
+import type { RouteHandler, z } from '@hono/zod-openapi';
 import type { getKomodoStacksByServerRoute } from './get.route';
 
 export const getKomodoStacksByServerHandler: RouteHandler<
@@ -10,10 +10,8 @@ export const getKomodoStacksByServerHandler: RouteHandler<
   try {
     const stacks = await komodo.read('ListStacks', {
       query: {
-        resource: {
-          specifics: {
-            server_ids: [serverId],
-          },
+        specific: {
+          server_ids: [serverId],
         },
       },
     });

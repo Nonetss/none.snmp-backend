@@ -1,16 +1,12 @@
 import { komodo } from '@/lib/komodo';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { getKomodoContainersByServerRoute } from './get.route';
+import type { listKomodoContainersRoute } from './list.route';
 
-export const getKomodoContainersByServerHandler: RouteHandler<
-  typeof getKomodoContainersByServerRoute
+export const listKomodoContainersHandler: RouteHandler<
+  typeof listKomodoContainersRoute
 > = async (c) => {
-  const { serverId } = c.req.valid('param');
-
   try {
-    const containerList = await komodo.read('ListAllDockerContainers', {
-      servers: [serverId],
-    });
+    const containerList = await komodo.read('ListAllDockerContainers', {});
 
     return c.json(
       containerList.map((container) => ({
@@ -24,10 +20,7 @@ export const getKomodoContainersByServerHandler: RouteHandler<
       200,
     );
   } catch (error) {
-    console.error(
-      `[Komodo Get Containers] Error for server ${serverId}:`,
-      error,
-    );
+    console.error('[Komodo List All Containers] Error:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;
   }
 };

@@ -8,16 +8,7 @@ export const getKomodoServersHandler: RouteHandler<
   try {
     const servers = await komodo.read('ListServers', {});
 
-    return c.json(
-      servers.map((s) => ({
-        id: s.id,
-        name: s.name,
-        address: s.info.address,
-        state: s.info.state,
-        version: s.info.version,
-      })),
-      200,
-    );
+    return c.json(servers, 200);
   } catch (error) {
     console.error('[Komodo List Servers] Error:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;
