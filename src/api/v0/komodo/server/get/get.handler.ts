@@ -1,4 +1,4 @@
-import { komodo } from '@/lib/komodo';
+import { getKomodoClient } from '@/lib/komodo';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { getKomodoServerRoute } from './get.route';
 
@@ -8,6 +8,7 @@ export const getKomodoServerHandler: RouteHandler<
   const { serverId } = c.req.valid('param');
 
   try {
+    const komodo = await getKomodoClient();
     const [server, state, stacks, containers, tags] = await Promise.all([
       komodo.read('GetServer', { server: serverId }),
       komodo.read('GetServerState', { server: serverId }),

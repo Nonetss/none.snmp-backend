@@ -1,23 +1,45 @@
 import { Handler } from 'hono';
 import axios from 'axios';
-
-// Configuración de Pangolin desde variables de entorno
-const PANGOLIN_URL = process.env.PANGOLIN_URL || '';
-const PANGOLIN_KEY = process.env.PANGOLIN_KEY || '';
-const PANGOLIN_ORG = process.env.PANGOLIN_ORG || '';
-
-// Crear cliente Axios para Pangolin
-const pangolin = axios.create({
-  baseURL: PANGOLIN_URL,
-  headers: {
-    Authorization: `Bearer ${PANGOLIN_KEY}`,
-  },
-});
+import { db } from '@/core/config';
+import { pangolinAuthTable, pangolinOrgTable } from '@/db';
+import { eq } from 'drizzle-orm';
 
 export const pangolinGetHandler: Handler = async (c) => {
   try {
-    // Intentamos con /api/resources asumiendo que v1 puede ser incorrecto
-    const response = await pangolin.get(`/v1/org/${PANGOLIN_ORG}/resources`);
+    const [auth] = await db.select().from(pangolinAuthTable).limit(1);
+
+    if (!auth) {
+      return c.json(
+        { error: 'Pangolin credentials not found in database' },
+        404,
+      );
+    }
+
+    const [org] = await db
+      .select()
+      .from(pangolinOrgTable)
+      .where(eq(pangolinOrgTable.authId, auth.id))
+      .limit(1);
+
+    if (!org) {
+      return c.json(
+        { error: 'Pangolin organization not found in database' },
+        404,
+      );
+    }
+
+    const { url, token } = auth;
+    const orgSlug = org.slug;
+
+    // Crear cliente Axios para Pangolin
+    const pangolin = axios.create({
+      baseURL: url,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const response = await pangolin.get(`/v1/org/${orgSlug}/resources`);
     return c.json(response.data.data.resources);
   } catch (error: any) {
     console.error('Error al obtener recursos de Pangolin:', error.message);

@@ -1,4 +1,4 @@
-import { komodo } from '@/lib/komodo';
+import { getKomodoClient } from '@/lib/komodo';
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { listKomodoContainersRoute } from './get.route';
 
@@ -6,6 +6,7 @@ export const listKomodoContainersHandler: RouteHandler<
   typeof listKomodoContainersRoute
 > = async (c) => {
   try {
+    const komodo = await getKomodoClient();
     const containerList = await komodo.read('ListAllDockerContainers', {});
 
     return c.json(containerList, 200);
