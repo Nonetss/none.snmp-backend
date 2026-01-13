@@ -51,11 +51,12 @@ export const containerInspectSchema = z.object({
       ContainerIDFile: z.string(),
       LogConfig: z.object({
         Type: z.string(),
-        Config: z.record(z.string()),
+        Config: z.record(z.string(), z.string()),
       }),
       NetworkMode: z.string(),
       PortBindings: z
         .record(
+          z.string(),
           z
             .array(
               z.object({
@@ -84,26 +85,27 @@ export const containerInspectSchema = z.object({
       AttachStdin: z.boolean(),
       AttachStdout: z.boolean(),
       AttachStderr: z.boolean(),
-      ExposedPorts: z.record(z.object({})).nullable(),
+      ExposedPorts: z.record(z.string(), z.object({})).nullable(),
       Tty: z.boolean(),
       OpenStdin: z.boolean(),
       StdinOnce: z.boolean(),
       Env: z.array(z.string()),
       Cmd: z.array(z.string()),
       Image: z.string(),
-      Volumes: z.record(z.object({})).nullable(),
+      Volumes: z.record(z.string(), z.object({})).nullable(),
       WorkingDir: z.string(),
       Entrypoint: z.array(z.string()).nullable(),
-      Labels: z.record(z.string()).nullable(),
+      Labels: z.record(z.string(), z.string()).nullable(),
     })
     .passthrough(),
   NetworkSettings: z
     .object({
       Bridge: z.string().nullable(),
       SandboxID: z.string(),
-      Ports: z.record(z.any()).nullable(),
+      Ports: z.record(z.string(), z.any()).nullable(),
       SandboxKey: z.string(),
       Networks: z.record(
+        z.string(),
         z.object({
           IPAMConfig: z.any().nullable(),
           Links: z.array(z.string()).nullable(),
@@ -117,7 +119,7 @@ export const containerInspectSchema = z.object({
           GlobalIPv6Address: z.string(),
           GlobalIPv6PrefixLen: z.number(),
           MacAddress: z.string(),
-          DriverOpts: z.record(z.string()).nullable(),
+          DriverOpts: z.record(z.string(), z.string()).nullable(),
         }),
       ),
     })
