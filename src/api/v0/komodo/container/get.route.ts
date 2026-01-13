@@ -5,7 +5,7 @@ export const listKomodoContainersRoute = createRoute({
   method: 'get',
   path: '/',
   summary: 'List all Komodo containers',
-  tags: ['Komodo Containers'],
+  tags: ['Komodo'],
   responses: {
     200: {
       content: {

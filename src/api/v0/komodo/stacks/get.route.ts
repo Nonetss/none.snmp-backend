@@ -5,7 +5,7 @@ export const listKomodoStacksRoute = createRoute({
   method: 'get',
   path: '/',
   summary: 'List all Komodo stacks',
-  tags: ['Komodo Stacks'],
+  tags: ['Komodo'],
   responses: {
     200: {
       content: {
