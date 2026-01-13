@@ -7,6 +7,13 @@ services:
     restart: always
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@database:5432/${POSTGRES_DB:-postgres}
+      - NPM_IDENTITY=${NPM_IDENTITY}
+      - NPM_SECRET=${NPM_SECRET}
+      - NPM_URL=${NPM_URL}
+      - NPM_URL=${NPM_URL}
+      - PANGOLIN_KEY=${PANGOLIN_KEY}
+      - PANGOLIN_URL=${PANGOLIN_URL}
+      - PANGOLIN_ORG=${PANGOLIN_ORG}
     depends_on:
       database:
         condition: service_healthy
