@@ -70,6 +70,8 @@ import { installedApplicationsTable } from '@/db/models/win-info/installedApplic
 import { loginTable } from '@/db/models/win-info/login.table';
 import { userTable } from '@/db/models/win-info/user.table';
 import { runningServicesTable } from '@/db/models/win-info/runningService.table';
+import { dnsServerTable } from '@/db/models/toolbox/dnsServer.table';
+import { domainTable } from '@/db/models/toolbox/domain.table';
 
 export {
   deviceTable,
@@ -155,4 +157,8 @@ export {
   loginTable,
   userTable,
   runningServicesTable,
+
+  // Toolbox
+  dnsServerTable,
+  domainTable,
 };
