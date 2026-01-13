@@ -7,6 +7,7 @@ import monitorRouter from '@/api/v0/monitor';
 import notificationsRouter from '@/api/v0/notifications';
 import winInfoRouter from '@/api/v0/win-info';
 import userRouter from '@/api/v0/user';
+import proxyRouter from '@/api/v0/proxy';
 
 const apiRouter = new OpenAPIHono();
 
@@ -18,5 +19,6 @@ apiRouter.route('/v0/monitor', monitorRouter);
 apiRouter.route('/v0/notifications', notificationsRouter);
 apiRouter.route('/v0/win-info', winInfoRouter);
 apiRouter.route('/v0/user', userRouter);
+apiRouter.route('/v0/proxy', proxyRouter);
 
 export default apiRouter;
