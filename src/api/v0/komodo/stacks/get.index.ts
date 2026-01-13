@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { listKomodoStacksRoute } from './list.route';
-import { listKomodoStacksHandler } from './list.handler';
+import { listKomodoStacksRoute } from './get.route';
+import { listKomodoStacksHandler } from './get.handler';
 
 const listKomodoStacksRouter = new OpenAPIHono();
 

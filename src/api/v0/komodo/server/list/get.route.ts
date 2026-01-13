@@ -1,7 +1,7 @@
 import { createRoute } from '@hono/zod-openapi';
-import { getKomodoServersResponseSchema } from './get.schema';
+import { listKomodoServersResponseSchema } from './get.schema';
 
-export const getKomodoServersRoute = createRoute({
+export const listKomodoServersRoute = createRoute({
   method: 'get',
   path: '/',
   summary: 'List Komodo servers',
@@ -10,7 +10,7 @@ export const getKomodoServersRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: getKomodoServersResponseSchema,
+          schema: listKomodoServersResponseSchema,
         },
       },
       description: 'List of Komodo servers',

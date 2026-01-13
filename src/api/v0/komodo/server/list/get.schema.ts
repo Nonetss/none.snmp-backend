@@ -1,25 +1,41 @@
 import { z } from '@hono/zod-openapi';
 
-export const getKomodoServersResponseSchema = z.array(
+export const listKomodoServersResponseSchema = z.array(
   z.object({
     id: z.string(),
-    type: z.literal('Server'),
+    _id: z.object({
+      $oid: z.string(),
+    }),
     name: z.string(),
+    description: z.string(),
     template: z.boolean(),
     tags: z.array(z.string()),
-    info: z.object({
-      state: z.string(),
-      region: z.string().url(),
+    info: z.null(),
+    config: z.object({
       address: z.string().url(),
       external_address: z.string(),
-      version: z.string(),
+      region: z.string(),
+      enabled: z.boolean(),
+      timeout_seconds: z.number(),
+      passkey: z.string(),
+      ignore_mounts: z.array(z.string()),
+      stats_monitoring: z.boolean(),
+      auto_prune: z.boolean(),
+      links: z.array(z.string()),
       send_unreachable_alerts: z.boolean(),
       send_cpu_alerts: z.boolean(),
       send_mem_alerts: z.boolean(),
       send_disk_alerts: z.boolean(),
       send_version_mismatch_alerts: z.boolean(),
-      terminals_disabled: z.boolean(),
-      container_exec_disabled: z.boolean(),
+      cpu_warning: z.number(),
+      cpu_critical: z.number(),
+      mem_warning: z.number(),
+      mem_critical: z.number(),
+      disk_warning: z.number(),
+      disk_critical: z.number(),
+      maintenance_windows: z.array(z.unknown()),
     }),
+    base_permission: z.string(),
+    updated_at: z.number(),
   }),
 );

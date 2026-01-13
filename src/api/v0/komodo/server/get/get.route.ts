@@ -1,11 +1,11 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { containerListResponseSchema } from '../container.schema';
+import { getKomodoServerResponseSchema } from './get.schema';
 
-export const getKomodoContainersByServerRoute = createRoute({
+export const getKomodoServerRoute = createRoute({
   method: 'get',
   path: '/{serverId}',
-  summary: 'List Komodo containers by server ID',
-  tags: ['Komodo Containers'],
+  summary: 'Get full details of a Komodo server',
+  tags: ['Komodo'],
   request: {
     params: z.object({
       serverId: z.string().openapi({ example: 'server-id-1' }),
@@ -15,10 +15,13 @@ export const getKomodoContainersByServerRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: containerListResponseSchema,
+          schema: getKomodoServerResponseSchema,
         },
       },
-      description: 'List of Komodo containers for the specified server',
+      description: 'Full server details',
+    },
+    404: {
+      description: 'Server not found',
     },
     500: {
       description: 'Internal server error',
