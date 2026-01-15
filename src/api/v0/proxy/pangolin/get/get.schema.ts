@@ -93,8 +93,8 @@ export const pangolinGetResponseSchema = z.object({
         },
       ],
     }),
-  metadata: {
+  metadata: z.object({
     exists: z.boolean(),
     total_org: z.number(),
-  },
+  }),
 });
