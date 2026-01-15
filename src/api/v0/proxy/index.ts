@@ -7,8 +7,8 @@ import pangolinAuthRouter from './pangolin/auth';
 const proxyRouter = new OpenAPIHono();
 
 proxyRouter.route('/', npmRouter);
-proxyRouter.route('/npm/auth', npmAuthRouter);
+proxyRouter.route('/npm', npmAuthRouter);
 proxyRouter.route('/', pangolinRouter);
-proxyRouter.route('/pangolin/auth', pangolinAuthRouter);
+proxyRouter.route('/pangolin', pangolinAuthRouter);
 
 export default proxyRouter;

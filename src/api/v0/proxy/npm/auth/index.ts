@@ -6,9 +6,9 @@ import patchNpmAuthRouter from './patch/patch.index';
 
 const authRouter = new OpenAPIHono();
 
-authRouter.route('/', getNpmAuthRouter);
-authRouter.route('/', postNpmAuthRouter);
-authRouter.route('/', deleteNpmAuthRouter);
-authRouter.route('/', patchNpmAuthRouter);
+authRouter.route('/auth', getNpmAuthRouter);
+authRouter.route('/auth', postNpmAuthRouter);
+authRouter.route('/auth', deleteNpmAuthRouter);
+authRouter.route('/auth', patchNpmAuthRouter);
 
 export default authRouter;
