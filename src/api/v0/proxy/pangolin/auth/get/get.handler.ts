@@ -8,22 +8,18 @@ export const getPangolinAuthHandler: RouteHandler<
   typeof getPangolinAuthRoute
 > = async (c) => {
   try {
-    const [auth] = await db.select().from(pangolinAuthTable).limit(1);
-    if (!auth) return c.json(null, 200);
-
-    const [org] = await db
-      .select()
-      .from(pangolinOrgTable)
-      .where(eq(pangolinOrgTable.authId, auth.id))
-      .limit(1);
-
-    return c.json(
-      {
-        ...auth,
-        org: org || null,
+    const pangolinAuth = await db.query.pangolinAuthTable.findMany({
+      with: {
+        pangolinOrg: true,
       },
-      200,
-    );
+    });
+
+    const metadata = {
+      exists: pangolinAuth.length > 0,
+      total: pangolinAuth.length,
+    };
+
+    return c.json({ pangolinAuth, metadata }, 200);
   } catch (error) {
     console.error('[Pangolin Auth GET] Error:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;

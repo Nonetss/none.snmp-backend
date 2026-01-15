@@ -11,9 +11,10 @@ export const pangolinAuthResponseSchema = z.object({
   id: z.number(),
   url: z.string(),
   token: z.string(),
-  org: z.object({
+  pangolinOrg: z.object({
     id: z.number(),
     name: z.string(),
     slug: z.string(),
+    authId: z.number(),
   }),
 });
