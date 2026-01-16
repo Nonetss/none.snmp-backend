@@ -1,5 +1,5 @@
-import listKomodoContainersRouter from './list/get.index';
-import getKomodoContainerRouter from './get/get.index';
+import listKomodoContainersRouter from '@/api/v0/komodo/container/list/get.index';
+import getKomodoContainerRouter from '@/api/v0/komodo/container/get/get.index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 
 const komodoContainerRouter = new OpenAPIHono();
