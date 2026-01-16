@@ -20,7 +20,25 @@ export const bothGetHandler: Handler = async (c) => {
       );
     }
 
-    return c.json({ npm: npmResult, pangolin: pangolinResult });
+    const metadata = {
+      exists: npmResult.metadata.exists && pangolinResult.metadata.exists,
+      npm: npmResult.metadata,
+      pangolin: pangolinResult.metadata,
+      total_resources:
+        npmResult.response.reduce(
+          (acc, curr) => acc + curr.resource.length,
+          0,
+        ) +
+        pangolinResult.response.reduce(
+          (acc, curr) => acc + curr.resource.length,
+          0,
+        ),
+    };
+
+    return c.json({
+      response: { npm: npmResult.response, pangolin: pangolinResult.response },
+      metadata,
+    });
   } catch (error: any) {
     console.error('Error in NPM handler:', error.message);
     return c.json({ error: 'Internal Server Error' }, 500);
