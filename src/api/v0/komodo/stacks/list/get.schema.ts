@@ -31,3 +31,13 @@ export const stackItemSchema = z.object({
 });
 
 export const stackListResponseSchema = z.array(stackItemSchema);
+
+export const stackListMetadataSchema = z.object({
+  exists: z.boolean(),
+  total_stacks: z.number(),
+});
+
+export const stackListResponse = z.object({
+  response: stackListResponseSchema,
+  metadata: stackListMetadataSchema,
+});
