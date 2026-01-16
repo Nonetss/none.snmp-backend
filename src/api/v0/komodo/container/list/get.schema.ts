@@ -33,4 +33,20 @@ export const containerItemSchema = z.object({
   stats: statsSchema.optional(),
 });
 
-export const containerListResponseSchema = z.array(containerItemSchema);
+export const containerListMetadataSchema = z.object({
+  exists: z.boolean(),
+  total_containers: z.number(),
+  status: z.object({
+    running: z.number(),
+    paused: z.number(),
+    restarting: z.number(),
+    exited: z.number(),
+    created: z.number(),
+    dead: z.number(),
+  }),
+});
+
+export const containerListResponseSchema = z.object({
+  response: z.array(containerItemSchema),
+  metadata: containerListMetadataSchema,
+});
