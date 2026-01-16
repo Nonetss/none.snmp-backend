@@ -7,7 +7,7 @@ import {
 export const patchPangolinAuthRoute = createRoute({
   method: 'patch',
   path: '/',
-  summary: 'Partial update Pangolin credentials and org',
+  summary: 'Partial update Pangolin credentials',
   tags: ['Pangolin Auth'],
   request: {
     body: {

@@ -7,7 +7,7 @@ import {
 export const postPangolinAuthRoute = createRoute({
   method: 'post',
   path: '/',
-  summary: 'Create or update Pangolin credentials and org',
+  summary: 'Create or update Pangolin credentials',
   tags: ['Pangolin Auth'],
   request: {
     body: {

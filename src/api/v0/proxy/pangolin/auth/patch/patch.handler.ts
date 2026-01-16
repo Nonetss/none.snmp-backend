@@ -1,7 +1,7 @@
 import type { RouteHandler } from '@hono/zod-openapi';
 import type { patchPangolinAuthRoute } from './patch.route';
 import { db } from '@/core/config';
-import { pangolinAuthTable, pangolinOrgTable } from '@/db';
+import { pangolinAuthTable } from '@/db';
 import { eq } from 'drizzle-orm';
 
 export const patchPangolinAuthHandler: RouteHandler<
@@ -34,35 +34,7 @@ export const patchPangolinAuthHandler: RouteHandler<
       updatedAuth = result;
     }
 
-    // Update Org
-    const [existingOrg] = await db
-      .select()
-      .from(pangolinOrgTable)
-      .where(eq(pangolinOrgTable.authId, existingAuth.id))
-      .limit(1);
-    const orgFields = { name: body.orgName, slug: body.orgSlug };
-    Object.keys(orgFields).forEach(
-      (key) =>
-        (orgFields as any)[key] === undefined && delete (orgFields as any)[key],
-    );
-
-    let updatedOrg = existingOrg;
-    if (existingOrg && Object.keys(orgFields).length > 0) {
-      const [result] = await db
-        .update(pangolinOrgTable)
-        .set(orgFields)
-        .where(eq(pangolinOrgTable.id, existingOrg.id))
-        .returning();
-      updatedOrg = result;
-    }
-
-    return c.json(
-      {
-        ...updatedAuth,
-        org: updatedOrg,
-      },
-      200,
-    );
+    return c.json(updatedAuth, 200);
   } catch (error) {
     console.error('[Pangolin Auth PATCH] Error:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;
