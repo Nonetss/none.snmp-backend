@@ -1,6 +1,6 @@
 import { getKomodoClient } from '@/lib/komodo';
 import type { RouteHandler } from '@hono/zod-openapi';
-import type { listKomodoServersRoute } from './get.route';
+import type { listKomodoServersRoute } from '@/api/v0/komodo/server/list/get.route';
 
 export const listKomodoServersHandler: RouteHandler<
   typeof listKomodoServersRoute
@@ -29,8 +29,14 @@ export const listKomodoServersHandler: RouteHandler<
         links: server.config?.links || [],
       },
     }));
+    const metadata = {
+      exists: mappedServers.length > 0,
+      total_servers: mappedServers.length,
+      total_tags: tags.length,
+      tags: tags.map((t: any) => t.name),
+    };
 
-    return c.json(mappedServers, 200);
+    return c.json({ response: mappedServers, metadata }, 200);
   } catch (error) {
     console.error('[Komodo List Servers] Error:', error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;

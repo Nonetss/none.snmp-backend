@@ -39,3 +39,15 @@ export const listKomodoServersResponseSchema = z.array(
     updated_at: z.number(),
   }),
 );
+
+export const listKomodoServersMetadataSchema = z.object({
+  exists: z.boolean(),
+  total_servers: z.number(),
+  total_tags: z.number(),
+  tags: z.array(z.string()),
+});
+
+export const listKomodoResponseSchema = z.object({
+  response: listKomodoServersResponseSchema,
+  metadata: listKomodoServersMetadataSchema,
+});
