@@ -1,8 +1,8 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import komodoServerRouter from './server';
-import komodoStackRouter from './stacks';
-import komodoContainerRouter from './container';
-import komodoAuthRouter from './auth';
+import komodoServerRouter from '@/api/v0/komodo/server';
+import komodoStackRouter from '@/api/v0/komodo/stacks';
+import komodoContainerRouter from '@/api/v0/komodo/container';
+import komodoAuthRouter from '@/api/v0/komodo/auth';
 
 const komodoRouter = new OpenAPIHono();
 

@@ -127,3 +127,12 @@ export const containerInspectSchema = z.object({
 });
 
 export const containerResponseSchema = containerInspectSchema;
+
+export const containerMetadataSchema = z.object({
+  exists: z.boolean(),
+});
+
+export const containerResponse = z.object({
+  response: containerResponseSchema,
+  metadata: containerMetadataSchema,
+});

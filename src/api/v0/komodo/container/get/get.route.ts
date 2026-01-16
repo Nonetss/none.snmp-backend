@@ -1,5 +1,5 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { containerResponseSchema } from './get.schema';
+import { containerResponse } from '@/api/v0/komodo/container/get/get.schema';
 
 export const getKomodoContainerRoute = createRoute({
   method: 'get',
@@ -18,7 +18,7 @@ export const getKomodoContainerRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: containerResponseSchema,
+          schema: containerResponse,
         },
       },
       description: 'Komodo container',
