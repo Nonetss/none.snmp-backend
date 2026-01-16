@@ -10,3 +10,14 @@ export const pangolinAuthResponseSchema = z.object({
   url: z.string(),
   token: z.string(),
 });
+
+export const pangolinAuthMetadataResponseSchema = z.object({
+  exists: z.boolean(),
+  total_auth: z.number(),
+  total_org: z.number(),
+});
+
+export const pangolinAuthGetResponseSchema = z.object({
+  auth: pangolinAuthResponseSchema.nullable(),
+  metadata: pangolinAuthMetadataResponseSchema,
+});

@@ -1,5 +1,5 @@
 import { createRoute } from '@hono/zod-openapi';
-import { pangolinAuthResponseSchema } from '../auth.schema';
+import { pangolinAuthGetResponseSchema } from '@/api/v0/proxy/pangolin/auth/auth.schema';
 
 export const getPangolinAuthRoute = createRoute({
   method: 'get',
@@ -10,7 +10,7 @@ export const getPangolinAuthRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: pangolinAuthResponseSchema.nullable(),
+          schema: pangolinAuthGetResponseSchema.nullable(),
         },
       },
       description: 'Pangolin credentials',

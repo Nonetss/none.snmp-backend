@@ -6,9 +6,9 @@ import patchPangolinAuthRouter from './patch/patch.index';
 
 const authRouter = new OpenAPIHono();
 
-authRouter.route('/auth', getPangolinAuthRouter);
-authRouter.route('/auth', postPangolinAuthRouter);
-authRouter.route('/auth', deletePangolinAuthRouter);
-authRouter.route('/auth', patchPangolinAuthRouter);
+authRouter.route('/', getPangolinAuthRouter);
+authRouter.route('/', postPangolinAuthRouter);
+authRouter.route('/', deletePangolinAuthRouter);
+authRouter.route('/', patchPangolinAuthRouter);
 
 export default authRouter;
