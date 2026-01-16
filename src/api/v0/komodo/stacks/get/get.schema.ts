@@ -96,3 +96,12 @@ export const stackItemSchema = z.object({
 });
 
 export const stackResponseSchema = stackItemSchema;
+
+export const stackMetadataSchema = z.object({
+  exists: z.boolean(),
+});
+
+export const stackResponse = z.object({
+  response: stackResponseSchema,
+  metadata: stackMetadataSchema,
+});
