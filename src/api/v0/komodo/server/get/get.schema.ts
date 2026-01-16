@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 
-export const getKomodoServerResponseSchema = z.object({
+export const getKomodoServerResponse = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
@@ -61,4 +61,17 @@ export const getKomodoServerResponseSchema = z.object({
       }),
     )
     .optional(),
+});
+
+export const getKomodoServerMetadataSchema = z.object({
+  exists: z.boolean(),
+  total_stacks: z.number(),
+  total_containers: z.number(),
+  total_tags: z.number(),
+  tags: z.array(z.string()),
+});
+
+export const getKomodoServerResponseSchema = z.object({
+  response: getKomodoServerResponse,
+  metadata: getKomodoServerMetadataSchema,
 });

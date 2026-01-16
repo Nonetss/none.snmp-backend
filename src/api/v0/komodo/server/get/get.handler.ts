@@ -63,7 +63,15 @@ export const getKomodoServerHandler: RouteHandler<
       })),
     };
 
-    return c.json(response, 200);
+    const metadata = {
+      exists: true,
+      total_stacks: stacks.length,
+      total_containers: containers.length,
+      total_tags: tags.length,
+      tags: tags.map((t: any) => t.name),
+    };
+
+    return c.json({ response, metadata }, 200);
   } catch (error) {
     console.error(`[Komodo Get Server] Error for ID ${serverId}:`, error);
     return c.json({ message: 'Internal Server Error' }, 500) as any;
